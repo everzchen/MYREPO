@@ -127,5 +127,26 @@ Second, I did not anticipate schools whose average cost of attendance is between
 
 ## Question 4. Provide separate plots for cost and debt by control of the institution.
 
+The dataset includes three types of institutions, public, private non-profit and private for-profit. This characteristic is classified under the variable ('control').
+
+control: control of institution, 1=public, 2= private non-profit, 3=private for-profit
+
+The following code will tell me how many public, private non-profit, and private for-profit schools there are in this dataset.
+
+```{r}
+table(sc$control)
+```
+There are 35 public, 83 private non-profit, and 7 private for-profit schools in this dataset.
+
+I am interested in examining the relationship between average cost of attendance and median debt of graduates for the public institutions, only. To do this, I have to use both the 'filter' and 'select' commands. I first select only public institutions. Within that, I select the average cost of attendance and median debt of graduates. 
+
+```{r}
+sc%>%filter(control=="1")%>%
+  select(costt4_a,debt_mdn)
+```
+
+There are 35 public institutions in the dataset. This information can be visually shown in a scatterplot.
+testing.
+WHEEEEEE.
 
 
