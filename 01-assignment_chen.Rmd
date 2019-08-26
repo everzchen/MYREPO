@@ -76,40 +76,44 @@ Answer: The average earnings for individuals at the most and least selective col
 
 College size can be interpreted using the variable, ugds, the number of undergraduates. Dell'Arte International School of Physical Theatre has the smallest undergraduate program of only 27 students.  Florida International University has the largest number of undergraduates, 30,920 students. To determine if colleges with high SAT scores tend to be larger or smaller than colleges with low SAT scores, I decided to create a scatterplot graphic to examine the relationship between school size and average SAT score.
 
-The following code, ggplot, will create a graphics object. I will name it gg. Within this, I declare the dataset ('sc') the x variable ('sat_avg') and the y variable ('ugds'). I will also note that I want to use the institutional name ('instnm') as text.
-
-The last couple lines of code makes this scatterplot interactive, which makes it possible to put a mouse cursor over a particular point and see what university it corresponds to.
+The following code, ggplot, will create a graphics object. I will name it gg. Within this, I declare the dataset ('sc') the x variable ('sat_avg') and the y variable ('ugds'). I will also note that I want to use the institutional name ('instnm') as text. The last couple lines of code makes this scatterplot interactive, which makes it possible to put a mouse cursor over a particular point and see what university it corresponds to.
 
 ```{r}
 gg<-ggplot(data=sc, aes(x=sat_avg,y=ugds,text=instnm))
 gg<-gg+geom_point(alpha=.5,size=.5)
 gg<-gg+xlab("Average SAT")+ylab("Number of Undergraduates")
+gg<-gg+ggtitle("Median Student Debt and Average Cost of Tuition")
 gg
 gg_p<-ggplotly(gg)
 gg_p
 ```
 
-At first glance, there does not seem to be a strong relationship between college size and SAT scores. A fair number of universities with around 10,000 undergraduates have a range of average SAT scores. For example, CUNY Lehman College has 8821 undergraduates with an average SAT score of 910, and Northwestern University has 8905 undergraduates with an average SAT score of 1427.
-
-I decided to plot a linear regression line on this scatterplot to examine the relationship between average SAT score and the number of undergraduates.
+The scatterplot allows me to holistically see, in our dataset, to what extent average SAT score influenced the size of college. From this, I decided to filter the dataset, selecting for those universities with the highest SAT scores and the lowest SAT scores. Seeing the scatterplot allowed me to confidently assign that colleges with the highest SAT scores are those whose SAT scores are greater than 1400. Colleges with the lowest SAT scores are those whose SAT scores is less than 900. 
 
 ```{r}
-plot(sc$sat_avg, sc$ugds,main="Scatterplot of Number of Undergraduates and Average SAT Score", xlab="Average SAT", ylab="Number of Undergraduates", pch=19)
-sat.reg <- lm(ugds ~ sat_avg, data=sc)
-abline(sat.reg)
+sc%>%filter(sat_avg>1400)%>%select(instnm,sat_avg,ugds)%>%arrange(-ugds)
+
 ```
 
-The regression line shows that there is a slightly positive relationship between average SAT score and the number of undergraduates in a college. To determine if this relationship is statistically significant or not, I ran a summary of the linear regression model. 
+Of the 20 colleges whose average SAT scores is higher than 1400, most have a fairly high number of undergraduate students - 11 of them have more than 6000 undergraduate students. California Institute of Technology is unlike the rest, in that it only enrolls 951 undergraduate students. 
 
 ```{r}
-summary(sat.reg)
+sc%>%filter(sat_avg<900)%>%select(instnm,sat_avg,ugds)%>%arrange(-ugds)
 ```
 
-A simple linear regression analysis showed that the size of a college cannot be significantly predicted from average SAT scores, F(1, 96) = 1.744, p > .05, R^2 = 0.0076. This indicates that neither the slope nor intercept is statistically significant. The slope p>.05. The results confirm our initial inclination. This dataset does not indicate whether colelges with high SAT scores tend to be larger or smaller than colleges with low SAT scores.
+Of the 11 colleges whose average SAT scores is lower than 900, ten of them have less than 5000 undergraduate students. Overall, when comparing schools with very high and very low SAT scores, it appears that colleges with very high SAT scores (greater than 1400) tend to be larger in school size. 
+
+Based on a previous email exchange with Professor Bolton, I would like to answer this question with a slightly different approach. The institution's admission rate can serve as a proxy for college size. The rationale behind this is that an institution with a higher admission rate will have more students enrolled. Institutions who are more selective and have a lower admission rate will have fewer students enrolled. The following code is used to filter for institutions with a high admission rate (greater than 0.35).
+
+```{r}
+sc%>%filter(sat_avg>1400)%>%select(instnm,sat_avg,adm_rate)%>%arrange(-adm_rate)
+sc%>%filter(sat_avg<900)%>%select(instnm,sat_avg,adm_rate)%>%arrange(-adm_rate)
+```
+It is not easy to conclude whether institutions with high SAT scores tend to be larger or smaller, when we use admission rate as a proxy for school size. Of the 20 universities whose average SAT score is higher than 1400, half of them have an admission rate greater than 0.20 and half have an admission rate lower than 0.20. Of the 11 institutions whose average SAT scores is lower than 900, all of their admission rate ranges from 0.24 to 0.38. Is is likely that institutions with low average SAT scores will have a higher admission rate, so it's possible that their school size is also larger. 
 
 ## Question 3. Plot the relationship between cost and debt. What do you see? Does this surprise you?
 
-To examine the relationship between the cost of attendance and median student debt, I will use the following code, ggplot, to create a graphics object. I will name it as gg_costdebt. Using the dataset ('sc') the x variable ('debt_mdn') and the y variable ('costt4_a'). I will also note that I want to use the institutional name ('instnm') as text. The last couple lines of code makes this scatterplot interactive, which makes it possible to put a mouse cursor over a particular point and see what university it corresponds to.
+To examine the relationship between the cost of attendance and median student debt, I will use the following code, ggplot, to create a graphics object. Using the dataset ('sc') the x variable ('debt_mdn') and the y variable ('costt4_a'). I will also note that I want to use the institutional name ('instnm') as text. The last couple lines of code makes this scatterplot interactive, which makes it possible to put a mouse cursor over a particular point and see what university it corresponds to. This graphic is stored as "gg1."
 
 ```{r}
 gg<-ggplot(data=sc, aes(x=costt4_a,y=debt_mdn,text=instnm))
@@ -118,6 +122,7 @@ gg<-gg+xlab("Average Cost of Attendance")+ylab("Median Debt of Graduates")
 gg
 gg_p<-ggplotly(gg)
 gg_p
+gg1<-gg_p
 ```
 On first impression, one might presume that if the average cost of attendance is higher, then the median debt of graduates will also be higher. The scatterplot demonstrates that to some extent. Several universities whose average cost of attendance is in the range of 50k has the highest median debt of graduates, around 16k to 17k. In fact, the majority of graduates with median debt of less than 15,000 dollars receive a diploma from schools whose average cost of attendance is 40,000 dollars or less. Furthermore, schools with the least average cost of attendance, around 10,000 dollars have the smallest median of debt. In examining the extremes, schools with the highest and lowest average cost of attendnce, their graduates have the highest and lowest median debt, respectively. This aligns with my initial assumptions. 
 
@@ -138,15 +143,52 @@ table(sc$control)
 ```
 There are 35 public, 83 private non-profit, and 7 private for-profit schools in this dataset.
 
-I am interested in examining the relationship between average cost of attendance and median debt of graduates for the public institutions, only. To do this, I have to use both the 'filter' and 'select' commands. I first select only public institutions. Within that, I select the average cost of attendance and median debt of graduates. 
+I am interested in examining the relationship between average cost of attendance and median debt of graduates for the public institutions, only. To do this, I have to use both the 'filter' and 'select' commands. I first select only public institutions. Within that, I select the average cost of attendance and median debt of graduates. The data is presented in desending order of cost. This subset of data is stored as 'public.'
 
 ```{r}
 sc%>%filter(control=="1")%>%
-  select(costt4_a,debt_mdn)
+  select(instnm,costt4_a,debt_mdn)%>%arrange(-costt4_a)
+Public <- sc%>%filter(control=="1")%>%select(instnm,debt_mdn,costt4_a)
 ```
 
-There are 35 public institutions in the dataset. This information can be visually shown in a scatterplot.
-testing.
-WHEEEEEE.
+There are 35 public institutions in the dataset. This information can be visually shown in a scatterplot. The following code uses the command ggplot to create a graphics object. Layering this with "geom_point" tells the program to present a scatterplot. The image is stored as "gg_pub" for later use.
 
+```{r}
+gg<-ggplot(data=Public,aes(x=costt4_a,y=debt_mdn,text=instnm))
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+xlab("Average Cost of Attendance")+ylab("Median Debt")
+gg<-gg+ggtitle("Debt and Cost in Public Universities")
+gg
+gg_pub <-gg
+```
 
+The scatterplot above demonstrates a positive relationship between average cost of attendance and median debt in the 35 universities. 
+
+I am now interested in examining the relationship cost and debt of graduates for the private non-profit institutions, only. The following code filters for private non-profit institutions, saves it as a separate dataset named 'privatenp.' The ggplot command will use only the data from this group of 83 schools to create a scatterplot graphics object. 
+
+```{r}
+sc%>%filter(control=="2")%>%
+  select(instnm,costt4_a,debt_mdn)%>%arrange(-costt4_a)
+privatenp <- sc%>%filter(control=="2")%>%select(instnm,debt_mdn,costt4_a)
+gg<-ggplot(data=privatenp,aes(x=costt4_a,y=debt_mdn,text=instnm))
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+xlab("Average Cost of Attendance")+ylab("Median Debt")
+gg<-gg+ggtitle("Debt and Cost in Private Non-Profit Universities")
+gg
+gg_privatenp <-gg
+```
+
+The scatterplot also shows a positive relationship between average cost of attendance and median debt. It's important to note that many of the private non-profit schools have an average cost of attendance of around 50k. And, among this tightly grouped schools, there is a wide range of median debt. 
+
+The following code is used the generate the last plot, showing the relationship between median debt and average cost in eight private for-profit schools. This visual is saved as gg_privateprof for later use.
+```{r}
+sc%>%filter(control=="3")%>%
+  select(instnm,costt4_a,debt_mdn)%>%arrange(-costt4_a)
+privateprof <- sc%>%filter(control=="3")%>%select(instnm,debt_mdn,costt4_a)
+gg<-ggplot(data=privateprof,aes(x=costt4_a,y=debt_mdn,text=instnm))
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+xlab("Average Cost of Attendance")+ylab("Median Debt")
+gg<-gg+ggtitle("Debt and Cost in Private For-Profit Universities")
+gg
+gg_privateprof <-gg
+```
