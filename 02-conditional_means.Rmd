@@ -139,6 +139,10 @@ $$\hat{Y}=\bar{Y} $$
 
 What this says is our predicted income $\hat{Y}$ is equal to average income $\bar{Y}$ We'll always use $Y$ as the notation for a dependent variable and $X$ as the notation for an independent variable. 
 
+Summarize command, makes new variable mean_percapinc.2010 = mean of percapita income in 2010. The 'na.rm' tells Rstudio that if there's any missing data, simply remove it from the calculation. So, the mean per capita income in 2010 is 34,000. This is a prediction, without knowing anything else.
+
+Mutate adds a new variable to the dataset that's equal to the mean of a particular variable. The arrow changes the dataset.
+
 ```{r}
 
 ##Unconditional Average
@@ -181,6 +185,8 @@ pd<-pd%>%mutate(e1=percapinc.2010-mean_percapinc.2010)
 ```
 
 To calculate the root mean squared error, we use the `rmse` function from the `Metrics` library. The code below calculates and displays the `rmse`
+
+rmse(dataset-takethat-variable,dataset-takethat-variable)
 ```{r}
 ## RMSE
 
@@ -189,11 +195,15 @@ rmse_uncond_mean<-rmse(pd$percapinc.2010,pd$mean_percapinc.2010)
 rmse_uncond_mean
 ```
 
+Output: 7817.037
+On average, we would be off by $7,817 across the whole dataset.
 What this means is, on average, we are off by `r round(rmse_uncond_mean,2)`, which is a lot!
 
 ##Conditional Means With One Predictor Variable
 
 To incorporate additional information into the mean, we need to calculate averages at levels of other predictors. Let's calculate the average per capita income at different levels of college education. The code below will calculate average income across counties at four different levels of college education-- the four quantiles of college education in the dataset. 
+
+We use the mutate command to create a new variable, coll_grad_level, that splits it into four quartiles. "What quartile are you in terms of the number of college graduates?" The ntile command will divide the data into whatever number of groups we ask it to divide it up into. We command RStudio to divide this variable, coll_grad_pc, into four groups.
 
 ```{r condtl_mean_single}
 ##Condtional Average across a single variable
