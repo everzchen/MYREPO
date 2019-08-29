@@ -1,0 +1,150 @@
+---
+title: "02-assignment_chen"
+author: "Evelyn Chen"
+date: "8/28/2019"
+output: html_document
+---
+
+### Installing Libraries
+Installing the necessary libraries 
+
+```{r  include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotly)
+library(Metrics)
+```
+
+###Load Data
+Load the 'pd' dataset and a full explanation of data in the codebook, 'pd_lab_explain.Rdata.' 
+```{r data}
+load("pd.Rdata")
+load("pd_lab_explain.Rdata")
+view(lab_explain)
+```
+
+### For this assignment, you’ll be working with the county level dataset to predict a home ownership rates using conditional means. You’ll need to select the county-level characteristics that you think might be related to home ownership rates. 
+
+The outcome variable in this assignment is homeownership rate, 'homeown_rate' which is described as the rate of homeownership between 2008-2012. 
+
+### 1-Calculate the mean of the outcome
+
+There are two ways to calculate the mean homeownership rate. The first way, as shown in the code below, uses the summarize command. The 'na.rm' tells Rstudio that if there is any missing data, please remove it from the calculation. 
+
+```{r}
+##Unconditional Average
+pd%>%summarize(mean_homeown_rate=mean(homeown_rate,na.rm=TRUE))
+```
+
+The average homeownership rate from 2008-2012 is 72.7. This is a prediction, without knowing anything else. 
+
+### 2-Use your mean as a prediction. Create a new variable that consists of the mean of the outcome.
+
+The second way to calculate the mean homeownership rate is to use the mutate command. It adds a new variable to the dataset that's equal to the mean of a particular variable. This command will help input the average homeownership rate into our dataset.
+
+```{r}
+pd<-pd%>%mutate(mean_homeown_rate=mean(homeown_rate,na.rm=TRUE))
+```
+
+### 3-Calculate a summary measure of the errors for each observation - the difference between your prediction and the outcome.
+
+I am interested in calculating the Root Mean Squared Error (RMSE) to summarize our errors. Although the average homeownership rate from 2008-2012 is 72.7, the actual homeownership rate varies from county to county. The error, stored as the variable $e1$, will be equal to the actual value of homeownership rate 'homeown_rate" minus the mean value of homeownership rate 'mean_homeown_rate'. Calculating the RMSE would allow us to quantify the extent of our error across the whole dataset. 
+
+The code below will allow us to calculate the error, stored as variable 'e1.'
+```{r error_terms}
+pd<-pd%>%mutate(e1=homeown_rate-mean_homeown_rate)
+```
+
+To calculate the root mean squared error, we use the `rmse` function from the `Metrics` library.
+
+```{r}
+rmse_uncond_mean<-rmse(pd$homeown_rate,pd$mean_homeown_rate)
+
+rmse_uncond_mean
+```
+
+On average, we would be off by 7.65% across the whole dataset.
+
+## 4-Calculate the mean of the outcome at levels of a predictor variable.
+
+
+
+
+
+
+
+```{r}
+pd%>%filter(persons_below_poverty>40)%>%
+  select(homeown_rate, median_hh_inc,persons_below_poverty)%>%
+  arrange(-persons_below_poverty)
+
+```
+
+
+## 5-Use these conditional means as a prediction: for every county, use the conditional mean to provide a "best guess: as to that county's level of the outcome
+
+
+## 6-Calculate a summary measure of the error in your predictions.
+
+
+
+
+
+
+
+
+median_hh_inc
+
+```{r}
+gg<-ggplot(data=pd,aes(y=percapinc.2010,x=percapinc_rank,color="Actual"))
+```
+
+
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+geom_point(aes(y=mean_percapinc.2010,x=percapinc_rank,
+                  color="Predicted: Unconditional Mean"),
+                  size=.5)
+gg<-gg+xlab("Rank of Per Capita Income")+ylab("Per Capita Income")
+gg<-gg+scale_color_manual(name="Type",
+                          values=c("Actual"="black",
+                          "Predicted: Unconditional Mean"="blue")
+                          )
+gg<-gg+theme(legend.position="bottom")
+
+gg
+
+##Save for later
+
+gg2<-gg
+
+
+
+
+
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
