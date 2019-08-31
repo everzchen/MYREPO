@@ -9,18 +9,19 @@ output: html_document
 Installing the necessary libraries 
 
 ```{r  include=FALSE}
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plotly)
 library(Metrics)
-```
+library(dplyr)
+````
 
 ###Load Data
 Load the 'pd' dataset and a full explanation of data in the codebook, 'pd_lab_explain.Rdata.' 
 ```{r data}
 load("pd.Rdata")
 load("pd_lab_explain.Rdata")
-view(lab_explain)
 ```
 
 ### For this assignment, you’ll be working with the county level dataset to predict a home ownership rates using conditional means. You’ll need to select the county-level characteristics that you think might be related to home ownership rates. 
@@ -67,84 +68,47 @@ On average, we would be off by 7.65% across the whole dataset.
 
 ## 4-Calculate the mean of the outcome at levels of a predictor variable.
 
+The outcome variable, 'homeown_rate' shows the rate of homeownership at the various counties in the database between 2008-2012. I predict that the median income level might predict the rate of homeownership. This variable, 'median_hh_inc' showcases the median household income between 2008-2012. Since the data for both median income level (predictor) and the rate of homeownership (outcome) reflect characteristics of the counties in 2008-2012, I hypothesize that the median income level might be a good predictor variable and lower our RMSE value. 
 
+I will use the mutate command to create a new variable, median_hh_inc_level, that splits the predictor variable into four quartiles. The ntile command will divide 'median_hh_inc' into four groups.
 
+```{r condtl_mean_single}
+## Create a variable for quartiles of median income level
+pd<-pd%>%mutate(median_hh_inc_level=ntile(median_hh_inc,4))
+table(pd$median_hh_inc_level)
+summary(pd$median_hh_inc)
 
-
-
-
-```{r}
-pd%>%filter(persons_below_poverty>40)%>%
-  select(homeown_rate, median_hh_inc,persons_below_poverty)%>%
-  arrange(-persons_below_poverty)
-
+##The commands will be performed on each level of median household income.
+pd<-pd%>%group_by(median_hh_inc_level)%>%
+  mutate(pred_homeown_rate=mean(homeown_rate))
+  ## Ungroup
+  ungroup(pd)
 ```
 
+The output confirms that we divided the median household income into 4 equal sized groups. Each group has 772 counties. Furthermore, it indicates that the range of median income is from 19,624 to 122,068. The 25th percentile of median income in this dataset is 38,066 and the 75th percentile is 50,635. The median, the 50th percentile, across all counties is 43,809. I notice that the median of this dataset, 43,809 is less than the average median income, 45,531. This suggests that the spread of this variable is slightly positively skewed.
+
+To determine the mean homeownership rate at levels of median income level, I used the mutate command to create a new variable, pred_homeown_rate, which is the average homeownership rate, grouped by median income level. Then, I will run the summarize command, calculating the average homeownership rate across counties at four different levels of median household income - the four quartiles of median household income in the dataset. The last time of code in the next chunk will present the information in a table.  
+
+```{r}
+pd%>%select(county,median_hh_inc,median_hh_inc_level,pred_homeown_rate)%>%View()
+```
+
+Counties in the 1st, 2nd, 3rd, and 4th quartiles of median household income is predicted to have an average homeownership rate of 71.93%, 72.78%, 72.92%, and 73.31%, respectively. The information does not surprise me. If the county's median household income is higher, then the percentage of homeownership will also increase, because families have more dispensible income to save up for buying a home. 
 
 ## 5-Use these conditional means as a prediction: for every county, use the conditional mean to provide a "best guess: as to that county's level of the outcome
 
+Our notation for this predictor will be:
+y-hat is equal to the average of y, "given" our grouping variable to x - so, given that our median houehold income is in the first quartile.
+$$\hat{homeownershiprate}=(\bar{homeownrate}|X=x) $$
+That is, the predicted value of homeownership rate, $\bar{Y}$ is equal to the mean value of homeownership rate given our predictor of median household income.
 
 ## 6-Calculate a summary measure of the error in your predictions.
 
-
-
-
-
-
-
-
-median_hh_inc
+Let's see what happened to our RMSE when we did a conditional as opposed to an unconditional mean. 
 
 ```{r}
-gg<-ggplot(data=pd,aes(y=percapinc.2010,x=percapinc_rank,color="Actual"))
+rmse_cond_mean_one<-rmse(pd$homeown_rate,pd$pred_homeown_rate)
+rmse_cond_mean_one
 ```
+The RMSE is slightly lower, 7.637. This output signifies that our predicted homeownership rate, when median household income is grouped into quartiles, is on average 7.637% off across the whole dataset. The RMSE value is a bit lower than before, although I admit, it's a not significant improvement. In the future, I  consider grouping median household income into six groups, as opposed to quartiles. Also, I would be interested in examining if median home value, variable 'median_home_val', would be a good predictor variable. It's likely that counties with a higher median household income, but lower median home value, would have a higher percentage of homeownership rates. It's possible that the combination of both median household income and median home value would lower the RMSE further down.
 
-
-gg<-gg+geom_point(alpha=.5,size=.5)
-gg<-gg+geom_point(aes(y=mean_percapinc.2010,x=percapinc_rank,
-                  color="Predicted: Unconditional Mean"),
-                  size=.5)
-gg<-gg+xlab("Rank of Per Capita Income")+ylab("Per Capita Income")
-gg<-gg+scale_color_manual(name="Type",
-                          values=c("Actual"="black",
-                          "Predicted: Unconditional Mean"="blue")
-                          )
-gg<-gg+theme(legend.position="bottom")
-
-gg
-
-##Save for later
-
-gg2<-gg
-
-
-
-
-
-
-
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

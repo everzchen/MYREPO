@@ -15,6 +15,7 @@ We'll go through the following steps:
 
 
 ```{r  include=FALSE}
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plotly)
@@ -213,12 +214,15 @@ pd<-pd%>%mutate(coll_grad_level=ntile(coll_grad_pc,4))
 
 table(pd$coll_grad_level)
 
+summary(pd$coll_grad_pc)
+
+##The commands will be performed on each level of college grad education
 pd<-pd%>%group_by(coll_grad_level)%>% ## Group by predictor
-  ##Calculate mean at each level of predictor
+  ##Calculate mean at each level of predictor. Calculate the average income at each level of college education. The mutate command creates a new variable, pred_income_college that is the average income, grouped by college level.
   mutate(pred_income_college=mean(percapinc.2010))%>% 
   ## Ungroup
   ungroup()%>% 
-  #Rank by prediction, with ties sorted randomly
+  #Rank by prediction high to low, with ties sorted randomly
   mutate(pred_income_college_rank=rank(pred_income_college,ties.method="random"))
 ```
 
@@ -243,7 +247,7 @@ gg3<-gg
 ```
 
 Our notation for this predictor will be:
-
+y-hat is equal to the average of y, "given" our grouping variable to x - so, given that our college education is in the first quartile.
 $$\hat{Y}=(\bar{Y}|X=x) $$
 
 That is, the predicted value of y, $\bar{Y}$ is equal to the mean value of $Y$ given our predictor $X$ (college graduate levels in this case) is equal to a given value of $X$, denoted by $x$. 
@@ -253,9 +257,13 @@ Let's see what happened to our RMSE when we did a conditional as opposed to an u
 rmse_cond_mean_one<-rmse(pd$percapinc.2010,pd$pred_income_college)
 rmse_cond_mean_one
 ```
-
+The new rmse has improved, from 7800 to 6425. We've made progress towards getting a better prediction. This is a good. A lower RMSE means that our estimation is more accurate. If we wanted to predict what the level of income is for a given county, the educational level is a good indicator. 
 
 *Quick Exercise: Calculate per capita income as a function of the proportion of the county with a high school education*
+```{r}
+
+
+```
 
 We can continue "binning" the data to define averages by more and more subgroups. For instance, we might want to calculate the average income by education AND home ownership rate.
 
@@ -288,6 +296,11 @@ rmse_cond_mean_two<-rmse(pd$percapinc.2010,pd$pred_income_coll_and_homeown)
 rmse_cond_mean_two
 ```
 
+
+Root mean square error
+Error = actual data - prediction
+Larger errors = less predictive accuracy
+We can quantify this using MSE
 
 
 
