@@ -97,18 +97,43 @@ Counties in the 1st, 2nd, 3rd, and 4th quartiles of median household income is p
 
 ## 5-Use these conditional means as a prediction: for every county, use the conditional mean to provide a "best guess: as to that county's level of the outcome
 
-Our notation for this predictor will be:
-y-hat is equal to the average of y, "given" our grouping variable to x - so, given that our median houehold income is in the first quartile.
-$$\hat{homeownershiprate}=(\bar{homeownrate}|X=x) $$
-That is, the predicted value of homeownership rate, $\bar{Y}$ is equal to the mean value of homeownership rate given our predictor of median household income.
-
-## 6-Calculate a summary measure of the error in your predictions.
-
 Let's see what happened to our RMSE when we did a conditional as opposed to an unconditional mean. 
 
 ```{r}
 rmse_cond_mean_one<-rmse(pd$homeown_rate,pd$pred_homeown_rate)
 rmse_cond_mean_one
 ```
-The RMSE is slightly lower, 7.637. This output signifies that our predicted homeownership rate, when median household income is grouped into quartiles, is on average 7.637% off across the whole dataset. The RMSE value is a bit lower than before, although I admit, it's a not significant improvement. In the future, I  consider grouping median household income into six groups, as opposed to quartiles. Also, I would be interested in examining if median home value, variable 'median_home_val', would be a good predictor variable. It's likely that counties with a higher median household income, but lower median home value, would have a higher percentage of homeownership rates. It's possible that the combination of both median household income and median home value would lower the RMSE further down.
+
+The RMSE is slightly lower, 7.637. This output signifies that our predicted homeownership rate, when median household income is grouped into quartiles, is on average 7.637% off across the whole dataset. The RMSE value is a bit lower than before, signifying that we've made progress towards getting a better prediction. If we wanted to predict what the homeownership rate is for a given county, I would like to examine if variable 'median_home_val', would be a good predictor variable. It's likely that counties with a higher median household income, but lower median home value, would have a higher percentage of homeownership rates. It's possible that the combination of both median household income and median home value would lower the RMSE further down.
+
+The following code will create a variable for quartiles of median home values, 'median_home_val_level'. Then, I will use the group_by command to calculate the mean of homeownership rates, when grouped by two predictors - median home value (median_home_val_level) and median household income (median_hh_inc_level). This mean of hownership rates will be named a new variable, 'pred_homeownrate_homeincome_homevalue.' The last line of code in the chunk uses the ungroup command, to ensure that subsequent commands will not continue to be run within the "group_by" command.
+
+```{r}
+## Create a variable for quartiles of median income level
+pd<-pd%>%mutate(median_home_val_level=ntile(median_home_val,4))
+table(pd$median_home_val_level)
+summary(pd$median_home_val)
+
+##The commands will be performed on each level of median household income.
+pd<-pd%>%group_by(median_hh_inc_level,median_home_val)%>%
+  mutate(pred_homeownrate_homeincome_homevalue=mean(homeown_rate))
+  ## Ungroup
+  ungroup(pd)
+```
+
+
+```{r}
+pd%>%select(county,median_home_val, median_home_val_level, median_hh_inc,median_hh_inc_level,pred_homeownrate_homeincome_homevalue)%>%View()
+```
+
+If we look at the pd dataset now, it has created a new variable, 'pred_homeown_homeincome_homevalue.' The values of this new variable denotes our newly predicted homeownership rates, when we take into account two predictor variables - household income and median home value. The select command allows us to choose which variables to look at more closely. 
+
+## 6-Calculate a summary measure of the error in your predictions.
+
+We will use the RMSE command to quantify the error in my predictions of homeownership rates.
+```{r}
+rmse_cond_mean_two<-rmse(pd$homeown_rate,pd$pred_homeownrate_homeincome_homevalue)
+rmse_cond_mean_two
+```
+The output, 3.42, suggests that our predictions of homeownership rate, when taken into account both the county's median household income and median home value, is likely 3.42% off from the actual value. This RMSE value is considerably lower than our initial 'rmse_uncond_mean' of 7.64, indicating that these two predictor variables allows us to estimate our predictions of homeownership rates more accurately. 
 

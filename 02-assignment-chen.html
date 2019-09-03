@@ -466,15 +466,70 @@ pd&lt;-pd%&gt;%group_by(median_hh_inc_level)%&gt;%
 </div>
 <div id="use-these-conditional-means-as-a-prediction-for-every-county-use-the-conditional-mean-to-provide-a-best-guess-as-to-that-countys-level-of-the-outcome" class="section level2">
 <h2>5-Use these conditional means as a prediction: for every county, use the conditional mean to provide a &quot;best guess: as to that county’s level of the outcome</h2>
-<p>Our notation for this predictor will be: y-hat is equal to the average of y, “given” our grouping variable to x - so, given that our median houehold income is in the first quartile. <span class="math display">\[\hat{homeownershiprate}=(\bar{homeownrate}|X=x) \]</span> That is, the predicted value of homeownership rate, <span class="math inline">\(\bar{Y}\)</span> is equal to the mean value of homeownership rate given our predictor of median household income.</p>
-</div>
-<div id="calculate-a-summary-measure-of-the-error-in-your-predictions." class="section level2">
-<h2>6-Calculate a summary measure of the error in your predictions.</h2>
 <p>Let’s see what happened to our RMSE when we did a conditional as opposed to an unconditional mean.</p>
 <pre class="r"><code>rmse_cond_mean_one&lt;-rmse(pd$homeown_rate,pd$pred_homeown_rate)
 rmse_cond_mean_one</code></pre>
 <pre><code>## [1] 7.637088</code></pre>
-<p>The RMSE is slightly lower, 7.637. This output signifies that our predicted homeownership rate, when median household income is grouped into quartiles, is on average 7.637% off across the whole dataset. The RMSE value is a bit lower than before, although I admit, it’s a not significant improvement. In the future, I consider grouping median household income into six groups, as opposed to quartiles. Also, I would be interested in examining if median home value, variable ‘median_home_val’, would be a good predictor variable. It’s likely that counties with a higher median household income, but lower median home value, would have a higher percentage of homeownership rates. It’s possible that the combination of both median household income and median home value would lower the RMSE further down.</p>
+<p>The RMSE is slightly lower, 7.637. This output signifies that our predicted homeownership rate, when median household income is grouped into quartiles, is on average 7.637% off across the whole dataset. The RMSE value is a bit lower than before, signifying that we’ve made progress towards getting a better prediction. If we wanted to predict what the homeownership rate is for a given county, I would like to examine if variable ‘median_home_val’, would be a good predictor variable. It’s likely that counties with a higher median household income, but lower median home value, would have a higher percentage of homeownership rates. It’s possible that the combination of both median household income and median home value would lower the RMSE further down.</p>
+<p>The following code will create a variable for quartiles of median home values, ‘median_home_val_level’. Then, I will use the group_by command to calculate the mean of homeownership rates, when grouped by two predictors - median home value (median_home_val_level) and median household income (median_hh_inc_level). This mean of hownership rates will be named a new variable, ‘pred_homeownrate_homeincome_homevalue.’ The last line of code in the chunk uses the ungroup command, to ensure that subsequent commands will not continue to be run within the “group_by” command.</p>
+<pre class="r"><code>## Create a variable for quartiles of median income level
+pd&lt;-pd%&gt;%mutate(median_home_val_level=ntile(median_home_val,4))
+table(pd$median_home_val_level)</code></pre>
+<pre><code>## 
+##   1   2   3   4 
+## 772 772 772 772</code></pre>
+<pre class="r"><code>summary(pd$median_home_val)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   19400   82400  107300  130571  153825  944100</code></pre>
+<pre class="r"><code>##The commands will be performed on each level of median household income.
+pd&lt;-pd%&gt;%group_by(median_hh_inc_level,median_home_val)%&gt;%
+  mutate(pred_homeownrate_homeincome_homevalue=mean(homeown_rate))
+  ## Ungroup
+  ungroup(pd)</code></pre>
+<pre><code>## # A tibble: 3,088 x 61
+##    fips  pop2013 pop2010_base popchange_pc pop2010 popu5 popu18 pop65p
+##    &lt;chr&gt;   &lt;int&gt;        &lt;int&gt;        &lt;dbl&gt;   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+##  1 01001   55246        54571          1.2   54571   6.1   25.4   13.5
+##  2 01003  195540       182265          7.3  182265   5.7   22.4   18.1
+##  3 01005   27076        27457         -1.4   27457   5.8   21.1   15.9
+##  4 01007   22512        22919         -1.8   22915   5.3   21.3   14.3
+##  5 01009   57872        57322          1     57322   6.1   23.8   16.4
+##  6 01011   10639        10915         -2.5   10914   6.3   21     14.6
+##  7 01013   20265        20946         -3.3   20947   6.1   23.3   17.7
+##  8 01015  116736       118572         -1.5  118572   5.8   22.2   15.5
+##  9 01017   34162        34170          0     34215   5.9   21.4   17.8
+## 10 01019   26203        25986          0.8   25989   4.8   20.7   20.1
+## # … with 3,078 more rows, and 53 more variables: female_pc &lt;dbl&gt;,
+## #   white_pc &lt;dbl&gt;, black_pc &lt;dbl&gt;, am_ind_pc &lt;dbl&gt;, asian_pc &lt;dbl&gt;,
+## #   hawaii_pi_pc &lt;dbl&gt;, twomore_race_pc &lt;dbl&gt;, hispanic_pc &lt;dbl&gt;,
+## #   white_non_hispanic_pc &lt;dbl&gt;, same_house_pc &lt;dbl&gt;,
+## #   foreign_born_pc &lt;dbl&gt;, other_eng_home_pc &lt;dbl&gt;, hs_grad_pc &lt;dbl&gt;,
+## #   coll_grad_pc &lt;dbl&gt;, veterans &lt;int&gt;, travel_time &lt;dbl&gt;,
+## #   housing_units &lt;int&gt;, homeown_rate &lt;dbl&gt;, house_unit_multi &lt;dbl&gt;,
+## #   median_home_val &lt;int&gt;, households &lt;int&gt;, person_per_hh &lt;dbl&gt;,
+## #   per_capita_inc &lt;int&gt;, median_hh_inc &lt;int&gt;,
+## #   persons_below_poverty &lt;dbl&gt;, pv_nonfarm &lt;int&gt;,
+## #   pv_nonfarm_employ &lt;int&gt;, pv_nonfarm_employ_ch &lt;dbl&gt;,
+## #   nonemployer_est &lt;int&gt;, firms &lt;int&gt;, firms_black_own_pc &lt;dbl&gt;,
+## #   firms_amind_own_pc &lt;dbl&gt;, firms_asian_own_pc &lt;dbl&gt;,
+## #   firms_hawaii_pi_own_pc &lt;dbl&gt;, firms_hispanic_own_pc &lt;dbl&gt;,
+## #   firms_female_own_pc &lt;dbl&gt;, manufacture_ship &lt;dbl&gt;, wholesale &lt;dbl&gt;,
+## #   retail &lt;dbl&gt;, retail_percap &lt;int&gt;, hospitality &lt;int&gt;,
+## #   bldg_permits &lt;int&gt;, land_area &lt;dbl&gt;, pop_per_square &lt;dbl&gt;,
+## #   county &lt;chr&gt;, percapinc.2010 &lt;dbl&gt;, percapinc.2012 &lt;dbl&gt;,
+## #   mean_homeown_rate &lt;dbl&gt;, e1 &lt;dbl&gt;, median_hh_inc_level &lt;int&gt;,
+## #   pred_homeown_rate &lt;dbl&gt;, median_home_val_level &lt;int&gt;,
+## #   pred_homeownrate_homeincome_homevalue &lt;dbl&gt;</code></pre>
+<pre class="r"><code>pd%&gt;%select(county,median_home_val, median_home_val_level, median_hh_inc,median_hh_inc_level,pred_homeownrate_homeincome_homevalue)%&gt;%View()</code></pre>
+<p>If we look at the pd dataset now, it has created a new variable, ‘pred_homeown_homeincome_homevalue.’ The values of this new variable denotes our newly predicted homeownership rates, when we take into account two predictor variables - household income and median home value. The select command allows us to choose which variables to look at more closely.</p>
+</div>
+<div id="calculate-a-summary-measure-of-the-error-in-your-predictions." class="section level2">
+<h2>6-Calculate a summary measure of the error in your predictions.</h2>
+<p>We will use the RMSE command to quantify the error in my predictions of homeownership rates.</p>
+<pre class="r"><code>rmse_cond_mean_two&lt;-rmse(pd$homeown_rate,pd$pred_homeownrate_homeincome_homevalue)
+rmse_cond_mean_two</code></pre>
+<pre><code>## [1] 3.412308</code></pre>
+<p>The output, 3.42, suggests that our predictions of homeownership rate, when taken into account both the county’s median household income and median home value, is likely 3.42% off from the actual value. This RMSE value is considerably lower than our initial ‘rmse_uncond_mean’ of 7.64, indicating that these two predictor variables allows us to estimate our predictions of homeownership rates more accurately.</p>
 </div>
 
 
