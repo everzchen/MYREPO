@@ -28,23 +28,29 @@ Next we load in the data.
 load("attrition.Rdata")
 ```
 
-Today, our primary outcome of interest will be attrition. This is a binary variable that is currently encoded as text-- "Yes" or "No." We need to encode it as a binary variable with 1 meaning yes and 0 meaning no. After recoding, we need to make sure that the new variable looks correct.
+Today, our primary outcome of interest will be attrition. This is a binary variable that is currently encoded as text-- "Yes" or "No." We need to encode it as a binary variable with 1 meaning yes and 0 meaning no. 1 = already left, 0 = not. After recoding, we need to make sure that the new variable looks correct.
 
 ```{r}
-## Crate a new variable named attrit and define it as 0
+## Create a new variable named attrit and define it as 0.
+### If attrition is yes, then it is defined as 1. Anything else is defined as 0.
 at<-at%>%mutate(attrit=ifelse(Attrition=="Yes",1,0))
 
+##Table of old Attrition variable
 table(at$Attrition)
 
+##Table of new attrit variable
 table(at$attrit)
 
 table(at$attrit,at$Attrition)
 ```
 
+Output shows that 237 employees left, 1233 employees did not leave the organization. 
 
 ##Univariate Graphics
 
 Univariate graphics help us understand what individual variables look like-- how are they distibuted across the sample? Here's a quick rundown on some univariate graphics. Say we wanted a quick count of who was in each department. We can use geom_bar to get this done. By default, this will give us a count in each department. 
+
+Frequency plot: We will use the ggplot command, telling the program what dataset to use, and give it the aesthetic. X-axis = department, fill of color = Department. We ask for a barplot.
 
 ```{r}
 gg<-ggplot(at,aes(x=Department,fill=Department))
@@ -66,7 +72,7 @@ gg<-ggplot(at,aes(x=DistanceFromHome))
 gg<-gg+geom_density()
 gg
 
-## Changing bandwidth-- not recommended, just showing you how. 
+## Changing bandwidth-- not recommended, just showing you how. It smooths out the density plot. Instead of the bandwidth = 1 mile, it is now 10 miles. 
 gg<-gg+geom_density(bw=10)
 gg
 ```
@@ -74,7 +80,9 @@ gg
 
 ## Predicting Attrition
 
-Our first prediction will use business travel as a predictor for attrition. There are three categories here-- non travel, travel infrequently, and frequent travel. We'll calculate levels of attrtion at each level and then take a look at the data. 
+Our first prediction will use business travel as a predictor for attrition. There are three categories here-- non travel, travel infrequently, and frequent travel. We'll calculate levels of attrition at each level and then take a look at the data. 
+
+We are going to create a new dataset, called 'at_sum'. Using the group_by command and the summarize command, we are going to create a new variable, 'attr_avg' set equal to the mean attrition for each of the business travel categories. 
 
 ```{r}
 
@@ -85,6 +93,8 @@ at_sum<-at%>%
 at_sum
 
 ```
+
+8% of non-travel employees left the organization last year. About 25% of those who travel frequently left, and 15% of those who travel rarely left the organization last year.
 
 Remember that the mean of a binary variable indicates the proportion of the population that has a certain characteristcs. So, in our case, `r  round(at_sum$attr_avg[2],2)` of the sample that travels frequently left the company in the last year. Our first plot will be a basic bar plot, showing the average levels of attrition. 
 
@@ -101,20 +111,21 @@ at %>%
 Now we can plot it:
 
 ```{r}
-## Bar Plot with aesthetics: mean attrition as height, business travel as cateogry
+## Bar Plot with aesthetics: mean attrition as height, business travel as category
 gg<-ggplot(at_sum,aes(x=BusinessTravel,y=attr_avg))
-## Use bar plot geometry, height of bars set by level observed in dataset
+## Use bar plot geometry, height of bars set by level observed in dataset. The Identity tasks it to plot what is in the dataset.
 gg<-gg+geom_bar(stat="Identity")
 ## Print
 gg
 ```
 
-This is fine, but it should really be in the order of the underlying variable. We can use `fct_reorder` to do this. 
+This is fine, but it should really be in the order of the underlying variable. We can use `fct_reorder` to do this. A factor variable is not ordered, does not have any particular numeric values that would be associated with it. We're going to reorder by the levels of attrition.
 
 _Side_ _Note_
 
 What is a factor variable? In R, factor variables are used for categorical data. These are data elements that can take on one and only one value of a mutually exclusive and exhaustive list of elements. In our case, the travel variable is a factor-- employees can be in Non-Travel, Travel Frequently or Travel Rarely bins. Everyone is one bin, and the bins cover all possible options. We use factors when numbers won't work-- for characteristics like race or religion or political affiliation. 
 
+fct_reorder = reorder Business Travel by average attrition.
 ```{r}
 ## Same asethetics, but now orderred by level
 gg<-ggplot(at_sum,aes(x=fct_reorder(BusinessTravel,attr_avg),y=attr_avg))
@@ -127,11 +138,45 @@ gg<-gg+xlab("Amount of Travel")+ylab("Yearly Attrition")
 gg
 ```
 
+
+
 *Quick Exercise: Create a bar plot showing average attrition by department instead of travel*
+
+```{r}
+
+at_dept<-at%>%
+  group_by(Department)%>%
+  summarize(attr_avg=mean(attrit))
+
+at_dept
+
+```
+
+
+```{r}
+## Bar Plot with aesthetics: mean attrition as height, business travel as category
+gg<-ggplot(at_dept,aes(x=Department,y=attr_avg))
+## Use bar plot geometry, height of bars set by level observed in dataset. The Identity tasks it to plot what is in the dataset.
+gg<-gg+geom_bar(stat="Identity")
+## Print
+gg
+```
+
+```{r}
+## Same asethetics, but now ordered by level
+gg<-ggplot(at_dept,aes(x=fct_reorder(Department,attr_avg),y=attr_avg))
+
+gg<-gg+geom_bar(stat="identity")
+
+## Labeling
+gg<-gg+xlab("Department")+ylab("Yearly Attrition")
+##Print
+gg
+```
 
 ## Dot Plots
 
-A dot plot can be a good way of displaying conditional means as well. Many times dot plots are more easily understood if they are horizontal, so we'll use `coord_flip` to make it horizontal.
+A dot plot can be a good way of displaying conditional means as well. Many times dot plots are more easily understood if they are horizontal, so we'll use `coord_flip` to make it horizontal. It flips the x and y-axis.
 
 ```{r}
 at_sum<-at%>%
@@ -179,12 +224,16 @@ gg
 ```
 
 
-
 * Quick Exercise: Create either a bar plot or a dot plot showing attrition by department AND field of education *
 
 _Side_ _Note_: Colors
 
 What if we want to change colors? This is a little tricky for most people at first. `ggplot` thinks in terms of palettes, so you need to associate a palette with a characteristics of the graphic. Below, I replace the default palette with my own ugly one. 
+
+To change the scale for fill, instead of the automated palette, you're telling Rstudio to manually use the mypal palette. This changes the color of the fill. 
+
+Repeat the code to change the color of the outline. 
+
 
 ```{r}
 
@@ -253,7 +302,7 @@ at_sum<-at%>%
   ungroup()%>%
   arrange(attr_avg)
 
-at_sum
+view(at_sum)
 
 gg<-ggplot(at_sum,aes(x=fct_reorder(BusinessTravel,attr_avg),y=attr_avg))
 gg<-gg+geom_bar(stat="identity",aes(fill=MaritalStatus),position="dodge")
@@ -266,4 +315,28 @@ gg
 
 ```
 
+
+Plot predicted attrition by education field, department, and gender. 
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+## Using Facets
+
+at_sum<-at%>%
+  group_by(EducationField,Department,Gender)%>%
+  summarize(attr_avg=mean(attrit))%>%
+  ungroup()%>%
+  arrange(attr_avg)
+
+view(at_sum)
+
+gg<-ggplot(at_sum,aes(x=EducationField,y=attr_avg))
+gg<-gg+geom_bar(stat="identity",aes(fill=Gender),position="dodge")
+gg<-gg+facet_wrap(~Gender+EducationField,ncol=4)
+
+gg<-gg+ylab("Proportion of Employees Who Departed")+xlab("Department")
+gg<-gg+theme(axis.text.x = element_text(angle = 60, hjust = 1))
+gg<-gg+ggtitle("Departure by Gender and Education Field")
+gg
+
+```
 

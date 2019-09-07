@@ -1,0 +1,126 @@
+---
+title: "03-assignment_chen"
+author: "Evelyn Chen"
+date: "9/6/2019"
+output: html_document
+---
+
+###Loading libraries and dataset
+
+Assignment 3 tasks us to use the attrition dataset to answer the following questions.
+
+```{r  include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(forcats)
+library(RColorBrewer)
+library(knitr)
+```
+
+```{r}
+load("attrition.Rdata")
+```
+
+## 1-Create a graph that shows the distribution of monthly income.
+
+Given the continuous nature of the monthly income dataset, I used the 'gg+ggeom_histogram' command to create a histogram. This histogram has a binwidth of 1000 to group the employees.
+
+```{r}
+gg<-ggplot(at,aes(x=MonthlyIncome))
+gg<-gg+geom_histogram(binwidth = 1000,fill="lightblue")
+gg
+```
+
+## 2-Create a graph that shows the average level of monthly income by field of education.
+
+I will first calculate average monthly income when grouped by field of education. To do this, I will create a new dataset, called 'at_income.ed.' Using the group_by command and the summarize command, I am going to create a new variable, 'income_avg' set equal to the mean income for each of the field of education categories. 
+
+```{r}
+
+at_income.ed<-at%>%
+  group_by(EducationField)%>%
+  summarize(income_avg=mean(MonthlyIncome))
+at_income.ed
+```
+
+The output shows that employees in the Marketing education field has the highest average monthly income of $7348.59. However, employees with a background in some technical degree earn the lowest average monthly income of $5758.30. 
+
+I want to present this information in a bar plot. To do this, I will use the ggplot command to create a graphic object. Then, I will ask Rstudio to create a bar plot using the 'gg+geom_bar' option.
+
+
+```{r}
+## Bar Plot with aesthetics: mean monthly income as height, education field l as category
+gg<-ggplot(at_income.ed,aes(x=EducationField,y=income_avg))
+gg<-gg+geom_bar(stat="Identity")
+gg<-gg+xlab("Education Field")+ylab("Average Monthly Income")
+gg<-gg+ggtitle("Average Monthly Income by Education Field")
+gg
+```
+
+##3-Create another graph that shows average level of monthly income by field of education and gender.
+
+We are interested in calculating the average monthly income by two predictors - field of education and gender. Using the group_by command and the summarize command, I will create a new variable, 'income_edu.gender' set equal to the mean monthly income for each category of the two predictors. This information will be saved in a new dataset, 'at_sum'.
+
+```{r}
+## Summarize monthly income by field of education and gender
+at_sum<-at%>%
+  group_by(EducationField,Gender)%>%
+  summarize(income_edu.gender=mean(MonthlyIncome))
+
+## Get the results
+at_sum
+```
+
+I will display this information in a bar plot.
+```{r}
+## Plot it using a bar plot
+gg<-ggplot(at_sum,aes(x=EducationField,y=income_edu.gender,color=Gender))
+gg<-gg+geom_bar(stat="identity",aes(fill=Gender),position="dodge")
+gg<-gg+ylab("Average Monthly Income")+xlab("Education Field")
+gg<-gg+ggtitle("Average Monthly Income by Education Field for Males and Females")
+gg<-gg+theme(axis.text.x = element_text(angle = 60, hjust = 1))
+gg
+```
+
+The bar plot clearly reveals that, across the entire dataset, females in the human resources field earn the highest average monthly income, overall. Furthermore, males in the technical background have the lowest average monthly income, $4855. The disparity in monthly income between males and females is quite significant in both the fields of human resources and technical degree.
+
+##4-Create a graph that shows average levels of monthly income by field of education, gender, and job level (scale of 1-5, highest ranked employees are 5).
+
+I am interested in using facets, or lots of little graphs, which show how the pattern varies across different groups. In this case, our groups will be defined by gender, field of education, and job level. 
+
+The following code will create a new dataset, 'at_income.edgenjob' which will show the average monthly income, when grouped by education field, gender, and job level. To do this, I will use the group_by and summarize command, creating a new variable, 'income_avg,' which is equal to the mean monthly income for each group of the three predictor variables. The data is arranged in decreasing values of average monthly income. 
+```{r}
+
+at_income.edgenjob<-at%>%
+  group_by(EducationField,Gender,JobLevel)%>%
+  summarize(income_avg=mean(MonthlyIncome))%>%
+  arrange(-income_avg)
+
+at_income.edgenjob
+```
+
+The data output suggests that highest-ranked employees earn the most and the lowest-ranked employees earn the least. It is clear from the dataset that employee ranking is an appropriate predictor variable for average monthly income, because the dataset shows that if an employee has a higher job level ranking, they tend to have a higher monthly income. There are 58 rows in this dataset, and the data is not presented well enough to discern to what extent gender and education field plays a role in predicting monthly income. 
+
+To further show average monthly income, grouped by field of education, gender, and job level, I am interested in visualizing this data using facets, or lots of little graphs, to show how monthly income varies across different groups.
+
+The following code 'ggplot' creates a graphic object. To create facets, we use the gg+facet_wrap command, separating out gender and job level. A few aesthetic adjustments are made, such as labeling the x and y-axes, adding a title to the graph.
+
+```{r}
+gg<-ggplot(at_income.edgenjob,aes(x=EducationField,
+                      y=income_avg,
+                      fill=Gender))
+## Bar plot, with unstacked (dodge)
+gg<-gg+geom_bar(stat="identity",position="dodge")
+## Rename x- and y-axis labels
+gg<-gg+ylab("Average Monthly Income")+xlab("Education Field")
+## Separate out by Gender and Job Level
+gg<-gg+facet_wrap(~Gender+JobLevel,ncol=5)
+## Adjust presentation of X-axis labels
+gg<-gg+theme(axis.text.x = element_text(angle = 60, hjust = 1))
+## Add title to graph
+gg<-gg+ggtitle("Average Monthly Income by Gender and Employee Ranking")
+## Print
+gg
+## Save as gg1
+gg1<-gg
+```
