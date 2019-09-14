@@ -51,7 +51,7 @@ I want to present this information in a bar plot. To do this, I will use the ggp
 ```{r}
 ## Bar Plot with aesthetics: mean monthly income as height, education field l as category
 gg<-ggplot(at_income.ed,aes(x=EducationField,y=income_avg))
-gg<-gg+geom_bar(stat="Identity")
+gg<-gg+geom_bar(stat="Identity",aes(fill=EducationField))
 gg<-gg+xlab("Education Field")+ylab("Average Monthly Income")
 gg<-gg+ggtitle("Average Monthly Income by Education Field")
 gg

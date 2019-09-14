@@ -3,7 +3,21 @@ title: Working With Flat Data Files
 output: github_document
 ---
 
-Flat data is data that is arranged with one case per row, with one column per variable-- more or less. It's stored in a variety of formats, with different conventions. Our goal is to get it into the most useful format for analysis: what's known as tidy data. 
+Flat data is data that is arranged with one case per row, with one column per variable-- more or less. Rows may or may not be labeled. Each column is a variable, a characteristic of that person/organization. Columns are almost always labeled. It's stored in a variety of formats, with different conventions. Our goal is to get it into the most useful format for analysis: what's known as tidy data. 
+
+Types of flat data files: delimited (comma-separated, csv; tab-separated, tsv), Fixed width (fwf, specify where in the file you'll find a variable, from point 2 to point 4, this is where you're going to find this variable).
+
+Other statistical languages: Stata, SPSS, SAS
+
+Data wrangling = Data munging, the process of converting raw data into a format that can then be used for data analysis and processing.
+
+Keys for organizing flat data: 
+1. No extraneous information (metadata) included inside dataset
+2. Clear column (variable) names
+3. Clear value labels
+4. Understanding units of analysis
+
+
 
 ```{r} 
 library(tidyverse)
@@ -24,19 +38,23 @@ We'll start with a csv file which is among the most common formats for datasets.
 
 hsb<-read_csv(file="https://stats.idre.ucla.edu/wp-content/uploads/2016/02/hsb2-2.csv")
 
+#Write the hsb dataset as a file. The write_csv command assumes its a csv file. We specify its path when the file is saved.
 write_csv(hsb,path="hsb.csv")
 
 #Check it out
 head(hsb)
 
-##Need these for later
+##Need these for later, list of names for the dataset.
 my.names<-names(hsb)
 
 #Write this in a variety of formats to be used later
+#tab-separated variable, "\t" = tab delimiter
 write_delim(hsb, path="hsb.txt",delim="\t")
 
+#semi-colon delimiter
 write_delim(hsb, path="hsb_semicolon.txt",delim=";")
 
+#fixed-width file
 gdata::write.fwf(data.frame(hsb),file="hsb.dat",sep="",colnames=FALSE)
 ```
 
@@ -61,14 +79,16 @@ my.widths=c(3,#id
             2, #science
             2 #socst
             )
-            
+## store the width settings as 'my_positions' using the command, 'fwf_widths'            
 my_positions<-fwf_widths(my.widths)
 
+#read fixed-width file, telling the program that the column widths are stored as my_positions
 hsb3<-read_fwf("hsb.dat",
          col_positions=my_positions)
 
 head(hsb3)
 
+#rename the variables
 names(hsb3)<-my.names
 
 head(hsb3)
@@ -80,13 +100,16 @@ head(hsb3)
 Other statistical programs have their own file formats. These are easy for these programs to read in. R can understand all of them, if the `haven` packages is used. 
 
 ### Stata
-Stata is a very popular statistical programming language among economists and social scientists. Stata files are stored in `dta` format. 
+Stata is a very popular statistical programming language among economists and social scientists. Stata files are stored in `dta` format. We will use the Haven package, which is designed to read in a bunch of data form different statistical programming languages.
 
 ```{r}
 # Stata
 
 hsb_stata<-read_dta("https://stats.idre.ucla.edu/stat/stata/notes/hsb2.dta")
+#view file
+view(hsb_stata)
 
+#look at the top of the dataset
 head(hsb_stata)
 
 ```
@@ -113,16 +136,35 @@ hsb_sas<-read_sas("https://stats.idre.ucla.edu/wp-content/uploads/2016/02/hsb2.s
 head(hsb_sas)
 ```
 
-## Excel (sigh)
+## What are databases?
+A database contains...
+1. multiple tables - it has more than one flat file within it
+2. certain tables are linked to one another via certain IDs
+3. can contain many different units of analysis
+4. can cover multiple domains. 
 
+A dataset..
+1. have unique IDs for each case
+2. have single units of analysis
+3. cover a single conceptual domain
+
+A dataset is NOT a database.
+
+Database can be used to generate single flat files. Each flat file can be a dataset. 
+
+## Excel (sigh)
 In most work settings you'll work with excel files. To get these into shape you'll have to do some wrangling. Below I show how this is done with data in a common reporting format. 
 
 ```{r}
 ## Web page: 
 ##http://nces.ed.gov/programs/digest/d14/tables/dt14_204.10.asp
 
+## If this file does not exist(FALSE), go ahead and download it from the web and name it as 'free.xls'
 if(file.exists("free.xls")==FALSE){
   download.file("http://nces.ed.gov/programs/digest/d14/tables/xls/tabn204.10.xls",destfile="free.xls")
+  
+## Read that file into memory as an R file, skip rows 1-4. Read in data starting on row 5. Don't import column names.
+  
 free<-read_excel("free.xls",skip=4,col_names=FALSE)  
 }else{
   free<-read_excel("free.xls",skip=4,col_names=FALSE)
@@ -163,8 +205,12 @@ First, let's git rid of unwanted columns by selecting a list of things we don't 
 
 free2<-free[ ,-(c(3,6,9,12,15,18))]
 
-#Get rid of unwanted rows
+#Get rid of unwanted rows, get rid of every row that has missing data
 free2<-free2%>%filter(is.na(X__1)==FALSE)
+```
+
+```{r}
+free2<-free2%>%na.omit(dt)
 ```
 
 Now we're going to select some things we DO want, by using the `number_1:number_x` setup. 
@@ -173,8 +219,10 @@ Now we're going to select some things we DO want, by using the `number_1:number_
 ##50 states plus dc only
 free2<-free2[2:52,]
 
+##Look at the beginning of the dataset
 head(free2)
 
+##Look at the end of the dataset
 tail(free2)
 ```
 

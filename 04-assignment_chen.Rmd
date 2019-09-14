@@ -1,0 +1,106 @@
+---
+title: "04-assignment_chen"
+author: "Evelyn Chen"
+date: "9/8/2019"
+output: html_document
+---
+
+###Loading libraries
+
+
+```{r} 
+library(tidyverse)
+library(haven)
+library(readxl)
+library(readr)
+library(gdata)
+```
+
+### 1 - Panel Data for OECD Countries. Save as file name oecd.Rdata
+
+The following code loads the delimited dataset, showing a total of 342 observations and 29 variables. The "head" command confirms that the dataset was properly loaded.
+```{r}
+oecd<-read.delim(file="http://www.wiley.com/legacy/wileychi/baltagi/supp/Gasoline.dat", header=TRUE, sep =  "")
+
+head(oecd)
+
+```
+
+To save the filename as 'oecd.Rdata' I will use the following 'save' command.
+```{r}
+#Saving as an R file
+save(oecd,file="oecd.Rdata")
+```
+
+### 2- U.S. National Election Survey Data from 2004. Save as file name 'nes.Rdata'.
+
+The 2004 U.S. National Election Survey Data is available online at "http://www.uta.edu/faculty/story/DataSets.htm" as an SPSS file. 
+The following code will allow us to read this file, load it into our global environment as 'nes_survey2004,' preview the beginning of the dataset, and save it as 'nes.Rdata.'
+```{r}
+#SPSS
+nes_survey2004<-read_spss("http://www.uta.edu/faculty/story/DataSets/NES2004.sav")
+
+head(nes_survey2004)
+
+#Saving as an R file
+save(nes_survey2004,file="nes.Rdata")
+```
+
+The output reveals that this dataset 1212 observations of 242 variables. 
+
+### 3- General social survey, student version. Save as file name gss.Rdata.
+
+The general social survey, student version, is an excel file available online at "http://www.uta.edu/faculty/story/DataSets.htm." The file was downloaded and placed into my working directory. To read this excel file, I will use the 'read_excel' command.
+
+```{r}
+gss<-read_excel("GeneralSocialSurvey1996ExcelDataStudentVersion.xls",skip=0,col_names=TRUE)
+
+head(gss)
+
+save(gss,file="gss.Rdata")
+```
+
+### 4- Replication file for "Statistical Discrimination or prejudice? A large sample field experiment." Open the mainData.csv file and save as maindata.Rdata. 
+
+The file is available online at "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/26410&studyListingIndex=1_f1a615c2cbee97fb79c9d575ae73". I saved the mainData.cvs file and placed the file in my working directory. The following "read_csv" command will load this dataset to my global environment. The head(maindata) command confirms that the dataset looks clean. It contains 14237 observations of 41 variables. This dataset was saved as a R file, named "mainData.Rdata."
+
+```{r}
+maindata<-read_csv(file="mainData.csv")
+
+head(maindata)
+
+write_csv(maindata,path="mainData.Rdata")
+```
+
+### 5 - Lalonde dataset, covering work experiences in the Panel study of Income Dynamics (psid). Save as psid.Rdata. 
+
+The Lalonde data covers work experiences in the Panel Study of Income Dynamics (psid). The file is found online at "http://users.nber.org/~rdehejia/data/psid_controls.txt"
+
+```{r}
+psid<-read.delim(file="http://users.nber.org/~rdehejia/data/psid_controls.txt", header=FALSE, sep = "")
+
+head(psid)
+```
+
+The column labels are missing. The names of the variables were described on this website: "http://users.nber.org/~rdehejia/nswdata2.html"
+
+The variables from left to right are: treatment indicator (1 if treated, 0 if not treated), age, education, Black (1 if black, 0 otherwise), Hispanic (1 if Hispanic, 0 otherwise), married (1 if married, 0 otherwise), nodegree (1 if no degree, 0 otherwise), RE74 (earnings in 1974), RE75 (earnings in 1975), and RE78 (earnings in 1978).
+
+The following chunk shows how I rename my columns. I use the 'names' command, telling Rstudio to rename the columns in the 'psid' dataset. Finally, the 'head(psid)' command confirms that the columns have been successfully renamed. 
+
+```{r}
+names(psid)<-c("treatment",
+                "age",
+                "education",
+                "black",
+                "hispanic",
+                "married",
+                "nodegree",
+                "RE74",
+                "RE75",
+                "RE78"
+                )
+
+head(psid)
+```
+
