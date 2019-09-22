@@ -132,3 +132,10 @@ head(req_df)
 ```
 
 From the 3366776 flights from the flights table, 58665 of them are flown by United. The above output table shows the information from the flights table that are pertinent to United airlines.
+
+Disconnect connection
+```{r}
+#disconnect
+dbDisconnect(con)
+```
+
