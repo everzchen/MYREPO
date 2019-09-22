@@ -1,0 +1,96 @@
+---
+title: "07_assignment_chen"
+author: "Evelyn Chen"
+date: "9/14/2019"
+output: html_document
+---
+
+### Loading libraries
+
+Today, we are using the 'acs' library package in order to access the American Community Survey data via the census API.
+
+## Homework Assignment #7, OPTION B
+
+### Loading libraries
+```{r}
+library(arules)
+library(rtweet)
+library(twitteR)
+library(ROAuth)
+library(jsonlite)
+library(rjson)
+library(tokenizers)
+library(tidyverse)
+library(tm)
+library(wordcloud)
+```
+### 1 - Create a twittR account. What is your consumerKey? What is your accessToken?
+
+I created a twittR developer account. My consumer key is: 'loRET5AGtazsUSuBiZldHDu9i' My consumer secret key is 'zFumMSYdgS0MCWFb87myR0PsPl4SgKf6t4mgEGe2VS67kW3xRE'.
+
+The access token code is '1175413408557981696-AEblNvF48Tub6490ztTDyEImiLUPAy' and the access secret code is 'ED1KLtKPjzItKAFsWJzuDgqCegOGbeTsofJSrQV8mKuIN'.
+
+
+```{r}
+consumerKey='loRET5AGtazsUSuBiZldHDu9i'
+consumerSecret='zFumMSYdgS0MCWFb87myR0PsPl4SgKf6t4mgEGe2VS67kW3xRE'
+access_Token='1175413408557981696-AEblNvF48Tub6490ztTDyEImiLUPAy'
+access_Secret='ED1KLtKPjzItKAFsWJzuDgqCegOGbeTsofJSrQV8mKuIN'
+requestURL='https://api.twitter.com/oauth/request_token'
+accessURL='https://api.twitter.com/oauth/access_token'
+authURL='https://api.twitter.com/oauth/authorize'
+```
+
+
+
+### 2- Run example 07-twitterAPI.rmd. Use hashtag: Trump. What are the 5 most common words contained within collected tweets?
+
+When I ran the 07-twitterAPI.rmd file, the 5 most common words contained with the tweets collected were - Trump, news, no, impeached, to.
+
+
+### 3 - Run this RMD file and choose your favorite hashtag. Create a wordcloud using words from all collected tweets.
+
+I decided to use a trending hashtag - #BTS. BTS is a popular K-pop band from Korea. My students are obsessed with them. 
+
+```{r}
+setup_twitter_oauth(consumerKey,consumerSecret,access_Token,access_Secret)
+Search<-twitteR::searchTwitter("#BTS",n=50,since="2019-09-09")
+(Search_DF <- twListToDF(Search))
+# If you wish to store the tweets in a csv file ... 
+TransactionTweetsFile = "tweets_BTS.csv"
+(Search_DF$text[1])
+## Start the file
+Trans <- file(TransactionTweetsFile)
+## Tokenize tweets into a list of words 
+Tokens<-tokenizers::tokenize_words(Search_DF$text[1],stopwords = stopwords::stopwords("en"), 
+          lowercase = TRUE,  strip_punct = TRUE, strip_numeric = TRUE,simplify = TRUE)
+## Write squished tokens
+cat(unlist(str_squish(Tokens)), "\n", file=Trans, sep=",")
+close(Trans)
+## Append remaining lists of tokens into file
+## NOTE - a list of tokens is the set of words from a Tweet
+Trans <- file(TransactionTweetsFile, open = "a")
+tokenList = Tokens
+for(i in 2:nrow(Search_DF)){
+  Tokens<-tokenize_words(Search_DF$text[i],stopwords = stopwords::stopwords("en"), 
+            lowercase = TRUE,  strip_punct = TRUE, simplify = TRUE)
+  cat(unlist(str_squish(Tokens)), "\n", file=Trans, sep=",")
+  tokenList <- c(tokenList,  unlist(str_squish(Tokens)))
+}
+close(Trans)
+```
+
+```{r}
+# Create a wordcloud, but first transform list of words into a 
+# TermDocumentMatrix
+cor <- Corpus(VectorSource(tokenList))
+tdm <- TermDocumentMatrix(cor)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+## NOTE:  d contains the words d$word AND frequencies d$freq
+wordcloud(d$word,d$freq, colors=c("red","green","blue","orange","black","purple", "seagreen") , random.color = TRUE, min.freq = 5)
+```
+
+
+
