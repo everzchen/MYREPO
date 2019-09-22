@@ -6,6 +6,8 @@ output: html_document
 
 # Introduction: What's a Database? 
 
+A database is a set of related tables, each of which contains records made up of multiple fields that have identifiers.
+
 Databases are the primary way large organizations and governments organize and store data. What makes a database distinct from a dataset is that it stores data in multiple tables, which are called "flat files" in the parlance of databases. The relationships between each of the tables is recorded in a schema. Some terms from database land and their translation in R:
 
 * A table (sometimes called a file) in a database is like a data frame in R: a 2 dimensional array. The 2 dimensions are referred to as "records" and "fields". These are typically organized by their primary id, or unit of analysis. 
@@ -16,9 +18,14 @@ Databases are the primary way large organizations and governments organize and s
 
 * A relational database is a set of tables that are linked by a set of common identifiers. Not every table can be linked to every other table, and tables do not need to have the same primary ids. 
 
-* A database management system is software that provides a way to interact with a database. 
+* A database management system is software that provides a way to interact with a database. A means to organize, maintain and query tables.
 
 The DBMS that is used most frequently is SQL and its variants, MYSQL and sqlite. Mariadb is a newer "sort of" variant of sql. Google BigQuery is one used by many companies, while Microsoft Access is a plague that has been set upon us for our transgressions. We hope someday the curse will be lifted. 
+
+*select: choose certain fields from a table
+*from: utilize certain tables
+*where: only select records that meet certain conditions
+*join: combine records from certain tables
 
 An R analyst typically doesn't want to be a database person-- they just want to get the data out in a way that they can use for data analysis. It's not worth it to store data on your own computer in a database-- it will just slow you down. Instead, this lesson is intended for when you have a chance to interact with a truly large database. 
 
@@ -88,6 +95,7 @@ dbListTables(con)
 ```
 
 For some of these tables, what fields are included? 
+con=creates a connection
 
 ```{r}
 #List fields in various tables
@@ -100,6 +108,8 @@ dbListFields(con,"planes")
 dbListFields(con,"weather")
 
 ```
+
+Some of the characteristics show up in multiple tables, we can start to see the overlap. For example, airlines and flights - they both have a carrier identifier. The flights dataset is tied to the weather dataset by tying it to year, month, day.
 
 ## Verbs for Databases
 
@@ -122,17 +132,43 @@ dbClearResult(req)
 Let's take a look at the generated data frame. 
 ```{r}
 dim(req_df)
+#16 different dimensions, 2 variables
 
 head(req_df,20)
 ```
 
 *Quick Exercise:*  Get the weather table and put it in a data frame
 
-## Select and From
+```{r}
+#Generate a SQL request to a database
+req_text<-"Select * from weather"
 
+#Send query through connection
+req<-dbSendQuery(con,req_text)
+
+#Generate dataframe from results
+req_df2<-dbFetch(req,n=-1)
+
+dim(req_df2)
+head(req_df2,20)
+
+#Good practice: clear request
+dbClearResult(req)
+
+```
+
+
+
+###Only getting part of a table
+
+## Select and From
 Many times we want to generate a request that will only give us part of some tables. We'd also like to join tables together in many circumstances. Below we build a SQL request that includes the key verbs SELECT, FROM, JOIN and WHERE.
 
 Let's say that we're interested in which airlines might have longer delays. 
+
+the 'f' = from now on, when I use the letter f in front of something, I mean this table flights. So, 'f.dep_delay' = I want the field 'dep_delay' that's associated with this table that's called 'f.' 
+
+
 
 ```{r}
 req1_text<-"SELECT f.dep_delay 
@@ -149,23 +185,56 @@ head(req1_df)
 
 We then need to get the airline data from the airline table
 ```{r}
-
+#select two fields, 'carrier' and 'name' from the airlines table
 req1_text <- "SELECT a.carrier, a.name
 FROM airlines a"
 
+req1<-dbSendQuery(con,req1_text)
+
+req1_df<-dbFetch(req1,n=-1)
+
+dbClearResult(req1)
+
+head(req1_df) 
 ```
 
 Notice how the SELECT commands give a prefix to field names, and that the FROM command identifies that same prefix when specifying the table. 
+
+Practice Question: Select just temp from the weather table. What's the first value?
+
+
+```{r}
+req1_text<-"SELECT w.temp 
+            FROM weather w 
+            "
+req1<-dbSendQuery(con,req1_text)
+
+req1_df<-dbFetch(req1,n=-1)
+
+dbClearResult(req1)
+
+head(req1_df) 
+```
 
 ## Join and Where
 
 We have airline information and departure information, but now we need to put them together. The JOIN command does just this. We need to specify for the JOIN command how we're going to put these two tables together. 
 
+We are interested in which carriers have different delays. Are there certain carriers that have longer or shorter delays on average during the course of this year?
+
 ```{r}
+# the carrier field in the airlines table matches up with the carrier field in the flights table
+# select name and carrier from the airlines table, select dep_delay from the flights table
+# from flights, join onto airlines. 
+# carrier from the airlines table = carrier from the flights table
+
 req1_text<-"SELECT a.carrier, a.name, f.dep_delay 
             FROM flights f 
             JOIN airlines a ON a.carrier=f.carrier 
             "
+
+
+
 req1<-dbSendQuery(con,req1_text)
 
 req1_df<-dbFetch(req1,n=-1)
@@ -192,6 +261,7 @@ dbClearResult(req1)
 
 head(req1_df)
 
+## create new dataset. 
 table(req1_df$name)
 
 delay_summary<-req1_df%>%
@@ -206,7 +276,7 @@ In this year, if flights were to be delayed by more than an hour, Hawaiian Airli
 
 ```{r}
 #New request: which carriers have the most long-distance delays? 
-req1_text<-"SELECT a.carrier, a.name, f.distance f.dep_delay 
+req1_text<-"SELECT a.carrier, a.name, f.distance, f.dep_delay 
             FROM flights f 
             JOIN airlines a ON a.carrier=f.carrier 
             WHERE f.distance>1000
@@ -221,6 +291,7 @@ head(req1_df)
 
 table(req1_df$name)
 
+## tally the number of long distance flight that were available
 dist_flights<-req1_df%>%
   group_by(name)%>%
   tally()%>%
@@ -233,7 +304,8 @@ delay_summary<-req1_df%>%
   group_by(name)%>%
   summarize(avg_delay=mean(dep_delay,na.rm=TRUE))%>%
   arrange(-avg_delay)
-
+  
+delay_summary
 ```
 
 

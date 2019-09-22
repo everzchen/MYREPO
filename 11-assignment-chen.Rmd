@@ -1,0 +1,134 @@
+---
+title: "11_assignment_chen"
+author: "Evelyn Chen"
+date: "9/22/2019"
+output: html_document
+---
+#Assignment 11, Evelyn Chen
+
+
+### Loading libraries
+
+```{r}
+#Get libraries
+library(tidyverse)
+library(nycflights13)
+library(RSQLite)
+```
+
+
+### 1 - Using the nyclflights13 library, open all of the data tables and turn them into a database. Make sure to include flights, airlines, airports, weather, and planes.
+
+The following commands will convert the flights, airlines, airports, weather, and planes datatables into a database. 
+```{r}
+# Data sources from NYC flights
+data(flights)
+data(airlines)
+data(airports)
+data(weather)
+data(planes)
+```
+
+```{r}
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+
+#Write flights tables to database (you won't usually do this)
+dbWriteTable(con,
+             "flights", 
+             as.data.frame(flights))
+
+dbWriteTable(con,
+             "planes", 
+             as.data.frame(planes))
+
+dbWriteTable(con,
+             "airlines", 
+             as.data.frame(airlines))
+
+dbWriteTable(con,
+             "weather", 
+             as.data.frame(weather))
+
+dbWriteTable(con,
+             "airports", 
+             as.data.frame(airports))
+```
+
+### 2 - Create a dataframe from a SQL pull from the database that only consists of flights that took off from JFK in May.
+
+To confirm that the flights table is appropriate to answer this question, I will use the 'dbListFields' command to show all the variables in the 'flights' table.
+
+```{r}
+dbListFields(con,"flights")
+```
+
+The 'planes' table shows the relevant information to answer this question. Of the 336776 observations in the table, only some flights originate from JFK. The following command will help us send a query to the database, requesting to only select flights from 'JFK' and fetch the query.
+
+The following commands will generate a SQL request to a database.
+
+```{r}
+
+req_text<-"SELECT * 
+            FROM flights 
+            WHERE origin=='JFK' and month=='5'
+            "
+
+req<-dbSendQuery(con,req_text)
+
+
+req_df<-dbFetch(req,n=-1)
+
+
+dbClearResult(req)
+
+head(req_df)
+```
+
+The resulting datatable, named 'req_df', shows all of the flights that took off from JFK airport in May 2013. There are 9397 observations of 19 variables. 
+
+### 3 - Create a dataframe from a SQL pull from the database that consists only of flights that off on-time (a delay of less than 10 minutes) from Newark at temperatures of less than 40 degrees F.
+
+I am unsure of what the FAA code is for newark, so I use the 'view' command and determine that Newark airport uses the FAA code of 'EWR'.
+```{r}
+view(airports)
+```
+
+I am submitting a new QUERY request, this time selecting for flights from EWR Newark airport that took off on time (dep_delay<10) at temperatures of less than 40 degrees F. To do this, I need to select  data from two different data tables - 'weather' and 'flights' and join them together. 
+
+```{r}
+
+req2_text<-"SELECT f.dep_delay, f.origin, f.carrier, w.temp, w.wind_speed
+            FROM flights f
+            JOIN weather w ON f.origin=w.origin AND f.month=w.month AND f.day=w.day
+            WHERE f.dep_delay<10 AND w.temp<40 AND f.origin=='EWR'
+            "
+
+req<-dbSendQuery(con,req2_text)
+
+req_df<-dbFetch(req,n=-1)
+
+dbClearResult(req)
+
+head(req_df)
+```
+
+The following output table shows the basic weather conditions (temperature, wind speed) when flights leave from Newark with minimal departure delays (less than 10 min) and temperature < 40 degrees Fahrenheit. I decided to include information about the flight carriers and wind-speed, to help us further explore potential trends in our data.
+
+### 4 - Create dataframe from a SQL pull from the database that consists of planes flown by United.
+
+```{r}
+req3_text<-"SELECT * 
+            FROM flights 
+            WHERE carrier=='UA'
+            "
+
+req<-dbSendQuery(con,req3_text)
+
+req_df<-dbFetch(req,n=-1)
+
+dbClearResult(req)
+
+head(req_df)
+```
+
+From the 3366776 flights from the flights table, 58665 of them are flown by United. The above output table shows the information from the flights table that are pertinent to United airlines.
