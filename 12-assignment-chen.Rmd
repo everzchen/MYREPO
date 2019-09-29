@@ -1,0 +1,205 @@
+---
+title: "12-assignment-chen"
+author: "Evelyn Chen"
+date: "9/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# clear the environment
+rm(list=ls())
+# load libraries
+library(tidyverse)
+library(stats)
+library(flexclust)
+library(ggplot2)
+library(LICORS)
+library(knitr)
+library(modelr)
+library(readxl)
+```
+
+## Assignment 12
+
+### 1 - Download the student evaluation dataset from the website.
+
+The excel file was posted in our course repo, so the following code loads it directly from my working directory.
+
+```{r}
+turk<-read_excel("turkiyestudentevaluation_generic.xlsx",skip=0,col_names=TRUE)
+```
+
+There are 5820 observations sorted in 33 variables.
+
+### 2 - Select a set of 10 related variables that you think might serve as the basis for clustering.
+
+The following command opens up the student evaluation dataset.
+```{r}
+view(turk)
+```
+
+Information about each variable was taken from 'http://archive.ics.uci.edu/ml/datasets/turkiye+student+evaluation' - The UCI's Machine Learning Repository. The Turkiye Student Evaluation Data Set
+
+The following variables are likely predictors that serve as a basis for clustering:
+'instr' - instructor's identifier, values 1, 2, and 3 each refer to a specific instructor
+'class' - course code, values 1-13. Each course code refers to a specific class
+'attendance' - level of attendance, values range from 0, 1, 2, 3, 4
+'difficulty' - level of difficulty of the course as perceived by the student, values 1, 2, 3, 4, 5
+
+There appears to be 28 questions in the student evaluation; each question's response is shown as an individual variable in the dataset. All 28 questions are likert-type, values range from 1, 2, 3, 4, 5.
+
+I have arbitrarily decided that Q1, Q2, Q3, Q4, and Q5 are also valid predictors for this clustering.
+
+'Q4': 'The course was taught according to the syllabus announced on the first day of class.'
+'Q9': 'I greatly enjoyed the class and was eager to actively participate during the lectures.'
+'Q10': 'My initial expectations about the course were met at the end of the period or year.'
+'Q14': 'The instructor came prepared for classes.'
+'Q22': ' The instructor was open and respectful of the views of students about the course.'
+
+Although all 28 questions of the student survey was meaningful, and all of the data collected is valid for interpretation, I predict that the five items above capture the heart of the student evaluation survey and therefore are valid predictors for this clustering. All students thrive when their professor sets clear academic expectations, treats others with respect, comes prepared for class, and encourages active participation. I predict that students who is satisfied of their professor on all five of these question items are likely to attend class. Students who are appropriately challenged will see observable growth, and their evaluation of their professor will reflect their satisfaction. Students who find the course exceedingly difficult may lose faith easily and stop attending. In this cluster analysis, I am interested in seeing what patterns and trends emerge from the data.
+
+### 3 - Run the clustering algorithm 'kmeanspp' to identify 3 clusters.
+
+The `kmeanspp` (stands for k-means ++) command will repeat the kmeans clustering algorithm with different starting points until it converges on a stable solution. 
+
+```{r}
+c2<-kmeanspp(turk,k=3,start="random",iter.max=1000,nstart=50)
+table(c2$cluster)
+```
+Group 1 = 1234
+Group 2 = 2227
+Group 3 = 2359
+
+The data is grouped into three clusters. Group 1, 2, and 3 has 1234, 2227, and 2359 student responses, respectively. 
+
+### 4 - Summarize the clusters using the variables you selected.
+
+We need to figure out what these clusters mean by inspecting them as a function of the constituent variables. 
+```{r}
+#Add predictions
+turk$cluster<-c2$cluster
+
+#Examine relationship of cluster assignment to chars.
+mycols<-c("Group 1","Group 2", "Group 3")
+```
+
+##### Attendance
+```{r}
+#Attendance
+att<-prop.table(table(turk$cluster,turk$attendance),margin=1)
+rownames(att)<-mycols
+att
+```
+
+Group 1 seems to have the highest proportion of participants who scored a '0' for attendance, 0.477, suggesting that this group of students had the largest number of students who did not attend class. 
+Group 2 seems to have the highest proportion of students who attended class. Compared to group 1, students in group 2 had the highest proportion of students who scored at '3' and '4' for attendance.
+
+For now, it seems as though:
+Group 1 = lowest level of attendance
+Group 2 = highest level of attendance
+Group 3 = moderate level of attendance
+
+##### Difficulty
+
+```{r}
+diff<-prop.table(table(turk$cluster,turk$difficulty),margin=1)
+rownames(diff)<-mycols
+diff
+```
+
+Student responses in group 1 seemed to find their course not challenging, many of them rating a '1' on difficulty. Groups 2 and 3 both seem to find their course moderately challenging, many of them scoring a '3' on the difficulty scale.
+
+##### Q4: The course was taught according to the syllabus announced on the first day of class
+```{r}
+Four<-prop.table(table(turk$cluster,turk$Q4),margin=1)
+rownames(Four)<-mycols
+Four
+```
+Group 1 is overwhelmingly composed of students who did not believe their professor taught in accordance to the academic expectations initially set on the first day of class. Group 2 is largely comprised of students who did believe the course was taught as anticipated. Most of the students in group 3 gave a middle rating on this question.
+
+##### Q9: I greatly enjoyed the class and was eager to actively participate during the lectures.
+```{r}
+Nine<-prop.table(table(turk$cluster,turk$Q9),margin=1)
+rownames(Nine)<-mycols
+Nine
+```
+Students in group 1 did not enjoy the class and/or eager participate during the lectures. Students in group 2 are clustered in the opposite way - many of them did enjoy class. Many students in group 3 gave a moderate rating on this question.
+
+##### Q10: My initial expectations about the course were met at the end of the period or year.
+```{r}
+Ten<-prop.table(table(turk$cluster,turk$Q10),margin=1)
+rownames(Ten)<-mycols
+Ten
+```
+Students in group 1 largely did not believe that their expectations of the course were met. 
+
+##### Q14: The instructor came prepared for classes.
+```{r}
+Fourteen<-prop.table(table(turk$cluster,turk$Q14),margin=1)
+rownames(Fourteen)<-mycols
+Fourteen
+```
+It looks like students in group 1 by in large did not believe their instructor came prepared for class.
+
+##### Q22: The instructor was open and respectful of the views of students about the course.
+```{r}
+Twentytwo<-prop.table(table(turk$cluster,turk$Q22),margin=1)
+rownames(Twentytwo)<-mycols
+Twentytwo
+```
+
+Students in group 1 did not perceive their instructor has been open and respectful of student views.
+
+
+##### Course Repetition
+```{r}
+Repeat<-prop.table(table(turk$cluster,turk$nb.repeat),margin=1)
+rownames(Repeat)<-mycols
+Repeat
+```
+
+Most of the students in all three groups were taking the course for the first time when the results of the survey came in.
+
+```{r}
+#Summarize groups by cluster
+sum<-turk%>%group_by(cluster)%>%summarize_all(funs(mean),na.rm=TRUE)
+sum
+```
+
+Now we'll `gather` everything, so that we have just two variables: the proportion (as a number) and the variable (as a character). In the following command, '-cluster' drops the cluster assignment.
+
+```{r}
+sum1<-gather(sum,-cluster,key=variable,value=value)
+sum1
+sum_total<-turk%>%summarize_all(funs(mean))
+
+sum_total<-gather(sum_total,key=variable,value=overall_mean)
+sum1<-left_join(sum1,sum_total,by="variable")
+```
+
+```{r}
+sum1<-sum1%>%group_by(variable)%>%mutate(varmeans=mean(value))
+
+## Plot the summary, sorted by cluster groups
+g1<-ggplot(data=sum1,aes(y=value,x=variable,fill=variable))
+g1<-g1+geom_bar(stat="identity")+coord_flip()+theme(legend.position="none")
+g1<-g1+geom_point(data=sum1,aes(y=overall_mean,x=variable))
+g1<-g1+facet_wrap(~cluster)
+g1
+```
+
+
+```{r}
+## Renaming clusters
+turk$cluster_name<-NA
+turk$cluster_name[turk$cluster==1]<-"Disatisfied Students"
+turk$cluster_name[turk$cluster==2]<-"Moderately Satisfied Students"
+turk$cluster_name[turk$cluster==3]<-"Highly Satisfied Students"
+
+table(turk$cluster_name)
+```
+
