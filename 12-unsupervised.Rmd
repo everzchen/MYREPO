@@ -6,6 +6,19 @@ output: github_document
 
 # Introduction
 
+Supervised learning: we train models to create preditions, then compare their predictions on out of sample answers to the right answer. We can (and do) iteratively improve these models. The computer is trained to come up with predictions that are as close as opposible to the right answer. Example - conditional means, regression models
+
+Unsupervised learning: an algorithm comes up with its own classification based on patterns in the data. There aren't really outcomes to predict in unsupervised learning. Instead, we're allowing the algorithm to generate insights into our data. There's not really a dependent variable. We're letting the algorithm sift through the data and give us some insights, what patterns it sees, what cases are close or further away from one another.]
+
+Two types of unsupervised learning: 
+
+Association - generating a series of 'rules' based on how people behave. Recommendation engines work this way. If a customer buys a dog bowl, dog bed, and a leash - then it will recommend the customer to also buy a collar. Same with retail locations - structured around association rules (bread, peanut butter, jelly)
+
+Clustering - covers problems where we want to classify groups in the data. Different from classification beause we don't know a priori what the groups are.
+
+
+## K Means Clustering
+
 K means clustering is an example of *unsupervised learning*, a set of techniques used to identify patterns of association within a dataset that are not driven by the analyst. This technique is employed when it is strongly suspected that there are latent classifications of individuals in a dataset, but those classifications are unknown. 
 
 There are many types of unsupervised learning---this is a very active area of development in data science. K-means is among the simplest, and is relatively easy to explain. It's also pretty good--- it tends to get decent answers. K-means proceeds by finding some number (K) groups of observations that are quite similar to one another, but quite different from other groups of observations. Similarity in this case is defined as having minimum variation within the group. The way this is done in practice is to start by randomly assigning each observation to a cluster, then to calculate the cluster centroid, which is the means of the variables used for the algorithm. Next, assign each observation to the cluster centroid which is closest to its means. This continues until no more changes are possible. 
@@ -30,7 +43,7 @@ library(knitr)
 library(modelr)
 ```
 
-The SFO survey data is pretty standard survey data, the kind you might get back from surveymonkey or qualtrics or other similar survey software. 
+The SFO survey data is pretty standard survey data, the kind you might get back from surveymonkey or qualtrics or other similar survey software. It surveys the passengers that visited SFO on a particular day.
 
 First, I load the dataset containing individual characteristics. We'll load the dependent variables later.
 ```{r}
@@ -43,6 +56,9 @@ sfo<-sf_cluster%>%select(-sf.runid)
 The first step in running cluster analysis is to figure out how many clusters are needed. It's generally assumed that there are at least 3 clusters, but it's not easy to think about how many more might be needed.
 
 The `stepFlexClust` command can be helpful here. What it will do is to run a cluster analysis a certain number of times for a certain number of clusters, choosing the best fit (minimum distance) from each set of runs for each number of clusters. We can then take a look at the distances generated and plot them. 
+
+k=2:7 (two to 7 clusters)
+nrep=20 (do this 20 different times)
 
 ```{r}
 #Test to see how many clusters are needed
@@ -59,6 +75,7 @@ It's not super clear where the cutoff should be for this data. The distances dro
 
 I'm going to run the `cclust` command twice, specifying that it should use 4 clusters, and the manhattan distance metric, which is scale-invariant. 
 
+
 ```{r}
 # Cluster analysis
 c1<-cclust(sfo,k=4,dist="manhattan")
@@ -71,9 +88,11 @@ c2
 
 ```
 
+C1 and C2 gives us very different cluster sizes. What's going on? This algorithm is sensitive if the group means aren't pretty clear.The data isn't strongly separated by these different groups, so we're going to have to try and find a way to get a real stable result out of this particular data. To start, run this command where we're going to bootstrap that flex clustering that we were doing before.
+
 Hmm, this gave us WAY different answers. Here's why-- the data aren't strongly separated by various groups, so it depends where the starting points were. 
 
-To visualize this, we'll use the `bootFlexclust` command, which will run the clustering algorithm on a subset of the data a certain number of times. This is called bootstrapping, and it shares many properties in common with cross-fold validation from last time. I'm going to do this for four different numbers of groups, from 2 through 5, then visualize the results. 
+To visualize this, we'll use the `bootFlexclust` command, which will run the clustering algorithm on a subset of the data a certain number of times. This is called bootstrapping, and it shares many properties in common with cross-fold validation from last time. I'm going to do this for four different numbers of groups, from 2 through 5, then visualize the results. (We will repeat this analysis 50 times)
 
 ```{r}
 c1a<-bootFlexclust(x=sfo,k=c(2,3,4,5),nboot = 50,verbose = TRUE)
@@ -99,6 +118,8 @@ Notice how the sample sizes in each group are identical, although the group numb
 # Understanding cluster assignments
 
 So now what? We need to figure out what these clusters mean by inspecting them as a function of the constituent variables. 
+
+What do the different groups indicate about the individuals in them? Do they inhabit any recognizable patterns?
 
 ```{r}
 #Add predictions
@@ -144,7 +165,7 @@ pt<-round(pt,1)
 kable(pt,row.names = TRUE,col.names = c("Not a moderate traveler","Moderate traveler"))
 ```
 
-That samge group also has many more moderate travelers. 
+That same group also has many more moderate travelers. 
 
 ```{r}
 #Age
@@ -168,7 +189,7 @@ pt<-round(pt,1)
 kable(pt,row.names = TRUE,col.names = c("Not a business traveler","Business traveler"))
 ```
 
-Now we're getting somehwere: One group is overwhelmingly composed of business travlers, and is much more likely to include frequent or moderate travelers. 
+Now we're getting somehwere: One group is overwhelmingly composed of business travelers, and is much more likely to include frequent or moderate travelers. 
 
 Let's look at income:
 ```{r}
@@ -209,6 +230,8 @@ sum1
 ```
 
 Now we'll `gather` everything, so that we have just two variables: the proportion (as a number) and the variable (as a character).
+
+'-cluster' = drop the cluster assignment
 ```{r}
 sum2<-gather(sum1,-cluster,key=variable,value=value)
 sum2
@@ -263,6 +286,8 @@ sfo$cluster_name[sfo$cluster==1]<-"Business Traveler"
 sfo$cluster_name[sfo$cluster==2]<-"Vacationers"
 sfo$cluster_name[sfo$cluster==3]<-"Golden Years"
 sfo$cluster_name[sfo$cluster==4]<-"Aunt Sally Visiting the Kids"
+
+table(sfo$cluster_name)
 ```
 
 
@@ -273,6 +298,7 @@ sfo$cluster_name[sfo$cluster==4]<-"Aunt Sally Visiting the Kids"
 Once you have clusters, then you can use these as independent variables to predict various outcomes. For instance, in our data, which clusters are likely to have problems in the airport? 
 We'll use a logistic regression to see which groups are more likely to report having a problem.  
 
+dependent variable = did you have a problem while visiting SFO? how likely are you to say that your experience was outstanding?
 
 ```{r}
 load("sf_complete.RDAta")
@@ -298,7 +324,10 @@ pred1<-predict(mod1,type="response",newdata=hypo_data)
 pred1<-sort(pred1,decreasing = FALSE)
 
 pred1<-pred1*100
+
+pred1
 ```
+Group 1 had a 13.6% probability of having a problem. Group 2 had a 13.4% chance of having a problem. Group 3 and 4 had a 10% chance of having a problem.
 
 What this shows is that `r round(pred1[1])` percent of this group is predicted to have a problem-- likely a group to focus on for improved customer service. 
 
@@ -314,8 +343,10 @@ pred_data<-data.frame(c((1:4),(1:4)),c(rep("Had Problem",4),rep("Outstanding",4)
                       c(pred1,pred2))
 
 names(pred_data)<-c("Cluster","Outcome","Prediction")
-```
 
+pred_data
+```
+When compared with the business travelers (group1), group 2 were statistically more likely to report that their experience was outstanding.
 
 ## Predicted probability of Outcomes by Group Membership
 ```{r}
