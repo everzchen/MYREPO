@@ -19,7 +19,7 @@ We will cover several different ways you can get data from the web
 1. Directly downloading web pages via the `url()` command. 
 1. Scraping simple web tables via `read_html()` and `html_table()` command
 1. Interacting with Application Programming Interfaces (APIs) via R libraries that have been designed as "wrappers" for these interfaces, like the awesome `acs` library and the `tigris` library for geographic shapes. 
-1. Interacting with APIs directly, 
+1. Interacting with APIs directly
 
 
 ## Libraries
@@ -49,7 +49,7 @@ You will also need an API key.
 
 # Basics of interacting with information stored online
 
-R can understand a web connection via the `url` command. Once that connection is established, we can download whatever we'd like. 
+R can understand a web connection via the `url` command. Once that connection is established, we can download whatever we'd like. The 'url' command downloads the entire webpage.
 
 ```{r}
 
@@ -66,26 +66,38 @@ moby_dick = readLines(moby_url, n = 1500)
 moby_dick[1205:1220]
 ```
 
+```{r}
+## url of pride and prejudice
+
+prideprejudice = url("http://www.gutenberg.org/files/42671/42671-h/42671-h.htm")
+# reading the content (first 15 lines)
+prideprejudice_15 = readLines(prideprejudice, n = 150)
+prideprejudice_15[1:150]
+
+```
+
 # Scraping web tables
 
 When we talk about "scraping" a web table, we're talking about pulling a table that exists on a website and turning it into a usable data frame for analysis. Below, I take the table from  `http://en.wikipedia.org/wiki/Marathon_world_record_progression` for men's marathon times and plot the change in speed in m/s as a function of the date that the world record was set. 
 
+Store the URL as a variable, 'marathon_wiki'
+The 'read_html' command will help us to pull the html table from that webpage, store it as 'marathon.'
 ```{r}
 marathon_wiki = "https://en.wikipedia.org/wiki/Marathon_world_record_progression"
 
 # Get the page, pull the tables via html_table
-marathon <- read_html(marathon_wiki)%>%html_table()
-
+marathon <- read_html(marathon_wiki)%>%html_table(,fill=TRUE)
 
 #Men's is the first table
 marathon<-tbl_df(data.frame(marathon[[1]]))
 
 #Convert time to seconds
+#Create a new variable, time2, converting time from hoursminutessecs(hms) to seconds
 marathon<-marathon%>%
   mutate(Time2=hms(as.character(Time)))%>%
   mutate(Time2=period_to_seconds(Time2))
 
-#Marathons are 42,200 meters long
+#Marathons are 42,200 meters long. We want to calculate speed in meters per second. The following equation calculates speed for each athlete.
 marathon$speed<-(4.22e4)/marathon$Time2
 
 #Get dates in a usable format usin lubridate::mdy
@@ -94,6 +106,8 @@ marathon$date<-mdy(marathon$Date)
 
 
 ## Progression of World Record Marathon Speed in Meters/Second
+
+We want to order the nationalities to see which nationalities ahve completed the fastest marathons. To do this we will mutate the nationality variable and reorder it by speed. We're going to create a new ggplot object, where the outcome is the speed of completion, the x variable is the date, and the color is the nationality of the athlete who completed the marathon.
 ```{r}
 
 marathon<-marathon%>%mutate(Nationality=fct_reorder(f=as.factor(Nationality),x=-speed,fun = max))
@@ -113,9 +127,31 @@ g1
 
 _Quick Exercise_ Repeat the above analysis for women's world record progression.
 
+
+
+##Scrape the IAAF records table for men from the Wikipedia page on the world record for the mile, available here: https://en.wikipedia.org/wiki/Mile_run_world_record_progression. What's the median time? Enter it in the format MM:SS.t
+
+
+```{r}
+IAAF = "https://en.wikipedia.org/wiki/Mile_run_world_record_progression"
+
+IAAF <-read_html(IAAF)%>%html_table(,fill=TRUE)
+
+##professional males are the first table
+IAAF_table<-tbl_df(data.frame(IAAF[[1]]))
+
+median(IAAF_table$Time)
+
+```
+
+
 # Interacting via APIs
 
 Many websites have created Application Programming Interfaces, which allow the user to directly communicate with the website's underlying database without dealing with the intermediary web content. These have been expanding rapdily and are one of the most exciting areas of development in data access for data science. 
+
+If you're aware of a resource with a large amount of data, look for an API first. If it does, then look for a "wrapper" package like the ACS package for R. If it doesn't ahve a wrapper package, then you'll need to write the request yourself.
+
+If no API is available, then check robots.txt and terms of service for whether or not you can scrape. If it's ok, then create a program to scrape and structure data. All normal ethics requirements apply (IRB, etc).
 
 Today, we'll be working with the American Community Survey from the census. Please go to: `http://www.census.gov/developers/` and click on "Get a Key" to get your census key. 
 
@@ -136,7 +172,7 @@ state_fips<-"47"
 county_stub<-"037"
 ```
 
-Next, we'll combine the state and county fips into a single object
+Next, we'll combine the state and county fips into a single object. Use the paste command. 'paste0' prevents there from being a space between the two.
 
 ```{r}
 county_fips<-paste0(state_fips,county_stub)
@@ -147,19 +183,20 @@ county_fips<-paste0(state_fips,county_stub)
 county_to_zip<-read_csv("http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt")
 save(county_to_zip,file="county_to_zip.Rdata")
 
-#easier names to work with
+#easier names to work with, lowercase
 names(county_to_zip)<-tolower(names(county_to_zip))
 
-#Just zip codes in selected county
+#Get the zip codes in selected county, Davidson county
 county_to_zip<-county_to_zip%>%filter(state==state_fips,county==county_stub)%>%
   select(zcta5,state,county)
 
-#list of zip codes
+#store the list of zip codes of Davidson county as ziplist
 ziplist<-county_to_zip$zcta5
 
-#City names
+#Get the zipcodes of every city in the USA. 
 data(zip_codes)
 
+##Filter the dataset, select just the zipcodes in our list. 
 city_zip<-zip_codes%>%filter(zip%in%ziplist)%>%select(zip,city)
 
 #Arrange in order
@@ -184,7 +221,10 @@ acs_key<-my_acs_key
 
 api.key.install(acs_key, file = "key.rda")
 
+##geomake command specifies what geographies you'd like to work with. 
 select_zip<-geo.make(zip.code=ziplist)
+
+##the Fetch command allows us to interact with the API, ask for the data. The col.names is pretty to make it easy to read, and the verbose=T to tell what it's doing as it downloads this data
 
 county_educ=acs.fetch(geography=select_zip,
                       endyear=2014,
