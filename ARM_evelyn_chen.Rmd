@@ -1,0 +1,156 @@
+---
+title: "ARM"
+author: "Evelyn Chen"
+date: "10/6/2019"
+output: html_document
+---
+
+### Twitter API Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, results ='show',include=TRUE,messages=FALSE)
+####### Twitter in R
+#  Consumer API keys
+#  Access token & access token secret
+## I have created a text file that contains the
+## consumerKey, the comsumerSecret, the access_Token, and the access_Secret
+## They are comma seperated. 
+# Insert your consumerKey and consumerSecret below
+consumerKey='SiMslBfTdWEimvLweRDTTrZVH'
+consumerSecret='FoPYqK3uwpzutwE6G1RmQvPbRJ8RChFSLfIlgRAcFHjymKDzHh'
+access_Token='1084502204038479872-v2czQaDlMt9ikoLnxhiQYk8Yb3f0RT'
+access_Secret='U9ktzvd5rEwcK13mttsgwAujS0VxNPtJstxXcEE5znnid'
+```
+
+
+```{r api, include=TRUE}
+requestURL='https://api.twitter.com/oauth/request_token'
+accessURL='https://api.twitter.com/oauth/access_token'
+authURL='https://api.twitter.com/oauth/authorize'
+### Load the needed packages...
+library(arules)
+library(rtweet)
+library(twitteR)
+library(ROAuth)
+library(jsonlite)
+library(rjson)
+library(tokenizers)
+library(tidyverse)
+library(wordcloud)
+library(wordcloud2)
+library(tidytext)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(syuzhet)
+library(stringr)
+library(arulesViz)
+```
+
+### 1 - Run the ARM coded example provided and choose a hashtag of your liking and collect 100 tweets. What hashtag did you choose?
+
+### 2 - Create a word cloud of all words from all tweets collected, and identify words that are non-informative and should be removed for the purposes of analysis (stopwords). What stopwords did you choose?
+
+### 3 - Create transaction data from the tweets and identify 5 rules that are "most interesting". What criteria did you use to determine whether a rule was "interesting"? Hint: Life, support, confidence, ...?
+
+### 4 - Create a visualization (using arulesviz or another) of the rules found as a result of your ARM model.
+
+I chose hashtag #FallonTOnight and collected 100 tweets.
+
+```{r tweets, include=TRUE}
+##############  Using twittR ##########################################################
+setup_twitter_oauth(consumerKey,consumerSecret,access_Token,access_Secret)
+Search<-twitteR::searchTwitter("#FallonTonight",n=100,since="2019-01-01")
+(Search_DF <- twListToDF(Search))
+TransactionTweetsFile = "Choc.csv"
+(Search_DF$text[1])
+## Start the file
+Trans <- file(TransactionTweetsFile)
+## Tokenize to words 
+Tokens<-tokenizers::tokenize_words(Search_DF$text[1],stopwords = stopwords::stopwords("en"), 
+          lowercase = TRUE,  strip_punct = TRUE, strip_numeric = TRUE,simplify = TRUE)
+## Write squished tokens
+cat(unlist(str_squish(Tokens)), "\n", file=Trans, sep=",")
+close(Trans)
+## Append remaining lists of tokens into file
+## Recall - a list of tokens is the set of words from a Tweet
+Trans <- file(TransactionTweetsFile, open = "a")
+for(i in 2:nrow(Search_DF)){
+  Tokens<-tokenize_words(Search_DF$text[i],stopwords = stopwords::stopwords("en"), 
+            lowercase = TRUE,  strip_punct = TRUE, simplify = TRUE)
+  cat(unlist(str_squish(Tokens)), "\n", file=Trans, sep=",")
+}
+close(Trans)
+```
+
+In this section we will read in the tweets stored in the CSV file using the (Association Rule Mining) ARM library. Each tweet will be considered a basket of words. We can use ARM to determine associations of words in tweets. 
+
+```{r baskets, include=TRUE}
+######### Read in the tweet transactions
+TweetTrans <- read.transactions(TransactionTweetsFile,
+                                rm.duplicates = FALSE, 
+                                format = "basket",
+                                sep=","
+                                ## cols = 
+                                )
+## See the words that occur the most
+Sample_Trans <- sample(TweetTrans, 50)
+summary(Sample_Trans)
+## Read the transactions data into a dataframe
+TweetDF <- read.csv(TransactionTweetsFile, header = FALSE, sep = ",")
+head(TweetDF)
+(str(TweetDF))
+```
+
+To clean up the text data, we will remove "rt", "http", etc and any other strings of no importance. 
+
+```{r clean,  include=TRUE}
+## Convert all columns to char 
+TweetDF<-TweetDF %>%
+  mutate_all(as.character)
+(str(TweetDF))
+# We can now remove certain words
+TweetDF[TweetDF == "pcas"] <- ""
+TweetDF[TweetDF == "o"] <- ""
+TweetDF[TweetDF == "e"] <- ""
+TweetDF[TweetDF == "rt"] <- ""
+TweetDF[TweetDF == "t.co"] <- ""
+TweetDF[TweetDF == "https"] <- ""
+## Clean with grepl - every row in each column
+MyDF<-NULL
+for (i in 1:ncol(TweetDF)){
+  MyList=c() # each list is a column of logicals ...
+  MyList=c(MyList,grepl("[[:digit:]]", TweetDF[[i]]))
+  MyDF<-cbind(MyDF,MyList)  ## create a logical DF
+  ## TRUE is when a cell has a word that contains digits
+}
+## For all TRUE, replace with blank
+TweetDF[MyDF] <- ""
+(head(TweetDF,10))
+# Now we save the dataframe using the write table command 
+write.table(TweetDF, file = "UpdatedChocolate.csv", col.names = FALSE, 
+            row.names = FALSE, sep = ",")
+TweetTrans <- read.transactions("UpdatedChocolate.csv", sep =",", 
+            format("basket"),  rm.duplicates = TRUE)
+```
+
+Next we will apply the apriori algorithm to find the associations including computing the support, confidence and lift. Read more on the arules library to tweak / tune the following code to achieve desired results. 
+
+```{r arm, include=TRUE}
+TweetTrans_rules = arules::apriori(TweetTrans, 
+            parameter = list(support=.01, confidence=.01, minlen=2))
+inspect(TweetTrans_rules[1:10])
+## sorted
+SortedRules_conf <- sort(TweetTrans_rules, by="confidence", decreasing=TRUE)
+inspect(SortedRules_conf[1:20])
+SortedRules_sup <- sort(TweetTrans_rules, by="support", decreasing=TRUE)
+inspect(SortedRules_sup[1:20])
+```
+
+Support is a measure of joint occurrence. The more X and Y happen together, the higher the value of support. It ranges from 0 to 1. According to our output, "thenighttimetalkshow" and "fallontonight" has the highest level of support, 0.788. In addition, "kristibeann" and "fallontonight" also had a high level of support, 0.519. This is not surprising, because Kristen Bellw as a recent guest that appeared on the television show.
+
+```{r graph, include=TRUE}
+plot (SortedRules_sup[1:50],method="graph",interactive=TRUE,shading="confidence") 
+plot (SortedRules_conf[1:50],method="graph",interactive=TRUE,shading="confidence") 
+```
+
+
