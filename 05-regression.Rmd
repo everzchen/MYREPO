@@ -5,13 +5,25 @@ output: html_document
 
 ## Overview
 
-So far, we've been using just the simple mean to make predictions. Today, we'll continue using the simple mean to make predictions, but now in a complicated way. Before, when we calculated conditional means, we did so in certain "groupings" of variables. When we run linear regression, we no longer need to do so. Instead, linear regression allows us to calculate the conditional mean of the outcome at _every_ value of the predictor. If the predictor takes on just a few values, then that's the number of conditional means that will be calculated. If the predictor is continuous and takes on a large number of values, we'statll still be able to calculate the conditional mean at every one of those values. 
+So far, we've been using just the simple mean to make predictions. Today, we'll continue using the simple mean to make predictions, but now in a complicated way. Before, when we calculated conditional means, we did so in certain "groupings" of variables. When we run linear regression, we no longer need to do so. Instead, linear regression allows us to calculate the conditional mean of the outcome at _every_ value of the predictor. If the predictor takes on just a few values, then that's the number of conditional means that will be calculated. If the predictor is continuous and takes on a large number of values, we'll still be able to calculate the conditional mean at every one of those values. 
+
+It does make one assumption: the conditional expectation function - the expected value of the outcome given the predictor is linear.
 
 The model we posit for regression is as follows:
 
 $$Y=\beta_0+\beta_1 x_1 +\beta_2 x_2+ ... \beta_k x_k + \epsilon$$
 
+y = dependent variable
+x = independent variable
+e = error term showing how far the fitted line is from x and y
+alpha = the intercept of the line desribing the relationship between x and y
+beta = the slope of the line describing the relationship between x and y
+
 It's just a linear, additive model. Y increases or decreases as a function of x, with multiple x's included. $\epsilon$ is the extent to which an individual value is above or below the line created. 
+
+Ordinary Least Squares is the most common form of regression when the dependent variable is continuous. OLS proceeds to find a line that minimizes the sum of squared errors (SSE) between the line and the points in the data. OLS depends on a key set of assumptions.
+
+
 
 Let's say that you've got some student data and you want to target those students that may struggle in math. The intervention could be targeted based on what we know about students, much of which reflects broader inequalities in our education system, such as the relationship between SES and parental education and test scores. By intervening early we may help to reduce those inequalities. 
 
@@ -33,9 +45,10 @@ load("els_train.RData")
 
 ## Bivariate regression
 
-Our dependent variable will be math scores, stored in this dataset as `bynels2m`. Let's take a look at this variable
+Our dependent variable will be math scores, stored in this dataset as `bynels2m`. Let's take a look at this variable. What variables can predict math scores?
 
 ```{r}
+# na.rm=TRUE - Any missing data will be ignored. 
 els_train%>%summarize(mean(bynels2m,na.rm=TRUE))
 
 gg<-ggplot(els_train,aes(x=bynels2m))
@@ -56,9 +69,15 @@ This variable has a nice symmetric distribution. It looks approximately normal, 
 
 #Model 1: simple bivariate regression
 
+#linear model of math scores (dep) as a function of socioeconomic status (pred), data set=els_train
 mod1<-lm(bynels2m~byses1,data=els_train) #outcome on left, predictor on right 
 
 summary(mod1)
+#the intercept of 44.99 tells us that if SES=0, the math scores is predicted to be 45.
+#coefficient says that for every one unit change in SES, the math scores is predicted to increase by 8.14 points
+#the relationship between SES and test scores is highly significant. We can reject the null hypothesis that the coefficient is zero. 
+#residual standard error = RMSE, we are off by 12.31 points on average.
+
 confint(mod1)
 
 g1<-ggplot(els_train, aes(x=byses1,y=bynels2m))+ #specify data and x and y
@@ -66,6 +85,7 @@ g1<-ggplot(els_train, aes(x=byses1,y=bynels2m))+ #specify data and x and y
            geom_smooth(method=lm) #ask for lm line
 g1
 
+#add predictions from this model. predictions - line. predixted value of y given a certain level of x.
 els_train<-els_train%>%add_predictions(mod1)%>%rename(pred1=pred) #predict using data in memory
  
 ## RMSE
@@ -77,24 +97,30 @@ What this shows is that as socio-economic status increases, math scores are pred
 
 _Quick Exercise_ Run a regression using a different predictor. Calculate rmse and see if you can beat my score. 
 
+What's the predicted amount of spending for a family with 40,000 in income? (Use only whole numbers, no commas or dollar signs)
+
+
 ## Multiple Regression. 
 
 Okay, so we can see that this is somewhat predictive, but we can do better. Let's add in a second variable: the parent's level of education. 
 
 ```{r}
 #Part 2: Multiple regression
-
+##adding in parental education as an additional predictor, in addition to SES
 mod2<-lm(bynels2m~as.factor(bypared)+
            byses1,
           data=els_train)
 
 summary(mod2) 
-
+#because our predictor of parental education is a categorical variable, it splits it up for every level of that factor. so we get a different coefficient for every level. All of the coefficients are interpreted relative to that one ommitted category. 
 els_train<-els_train%>%add_predictions(mod2)%>%rename(pred2=pred)
 
 rmse_2<-modelr::rmse(mod2,els_train); rmse_2
 
 ```
+
+Multiple R Squared: 0.1975, measure of how much of the variable in the dependent variable has been accounted for by the independent variables. R-squared ranges from 0-1. We've explained 19.75% of the variation in the dependent variable.
+
 
 This finding reflects the basic inequity in our education system: lower income students score lower on math scores. This holds true even if we control for parental education. 
 
@@ -104,9 +130,13 @@ _Quick Exercise_ Add another variable to your model from above and see what diff
 
 The `byses` variable is a little hard to interpret. It's on a scale from -2 to 2, which you should remember as the scale for a standardized variable or Z score. Let's transform it to be on a percentile scale from 0-100.
 
+We are going to transform the socioeconomic status variable, creating a new variable = percentile rank of the individual.
+
 ```{r}
 els_train<-els_train%>%mutate(byses_p=percent_rank(byses1)*100)
 els_train%>%summarize(mean(byses_p,na.rm=TRUE))
+
+summary(els_train$byses_p)
 ```
 
 ```{r}
@@ -116,7 +146,11 @@ mod3<-lm(bynels2m~byses_p+
          );summary(mod3)
 ```
 
-This changes the coefficient AND its interpretation. Now, for every one percent increase in SES, math scores are predicted to increase by `r round(mod3$coefficients[2],2)`. Linear transformations will not change the statistical significance (t value), but non linear transformations like the one we just did will, as you can see. Does this change the RMSE? 
+This changes the coefficient AND its interpretation. Now, for every one percent increase in SES, math scores are predicted to increase by `r round(mod3$coefficients[2],2)`. Linear transformations will not change the statistical significance (t value), but non linear transformations like the one we just did will, as you can see. 
+
+coefficient = 0.22. So what that says is for a one unit change in the percentile rank, your test scores are predicted to increase by 0.2. All of this works with simple multiplication, so if we said if it's a 10 point change, so if you go from the 50th to the 60th percentile in terms of your socioeconomic status, your test scores are predicted to increase by about two points. 
+
+Does this change the RMSE? 
 
 ```{r}
 rmse_3<-modelr::rmse(mod3,els_train)

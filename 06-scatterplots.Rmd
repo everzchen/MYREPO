@@ -24,6 +24,7 @@ We begin with a simple model of test scores as a function of socio-economic stat
 
 Our first step should be to plot the data. Today, we'll be using the `ggplot2` library, which is a highly functional implementation of what's known as the grammar of graphics. In a very small nutshell, the grammar of graphics refers to laying out a graphic in a series of layers. For our first scatterplot, we first specify the data that we'll be drawing on, then the "aesthetic" of the graphic, which will be based on our x and y variables from our regression. We then specify the first layer, which is a series of points defined by the intersection of the x and y variables. 
 
+x-axis: socioeconomic statis  y-axis: math scores
 
 ```{r}
 #Plot Spending vs. Income
@@ -43,6 +44,18 @@ g1<-g1+ylab("Math Test Scores")+xlab("Socio Economic Status")
 g1
 ```
 
+
+
+```{r}
+#Quick exercise
+g3<-ggplot(data=els,
+           aes(x=byincome,y=bynels2m)
+           )
+
+g3<-g3+geom_point(alpha=.5,size=.25) # Add points at x and y
+g3
+
+```
 
 ## Using Conditional Means to Create Scatterplots
 
@@ -109,6 +122,25 @@ g2
 
 ```
 
+
+```{r}
+#Quick exercise
+g2a<-ggplot(data=filter(els,is.na(byincome)==FALSE),
+            aes(x=byses1,y=bynels2m,
+                color=as.factor(byincome) #notice the color option
+                ))
+## Let's make the dots smaller for readability
+g2a<-g2a+geom_point(size=.1)
+
+## Changing the Legend
+g2a<-g2a+theme(legend.position="bottom"  , legend.title = 
+               element_blank())
+
+g2a<-g2a+ylab("Test Scores")+xlab("Socio Economic Status")
+
+g2a
+```
+
 Our  graphic is a bit complex, but shows the intersectionality between SES and parental education: there are very few students with low levels of parental education and/or high levels of SES or test scores.  
 
 We can see this same relationship in the model results: 
@@ -134,6 +166,7 @@ els<-els%>%add_predictions(mod_2)%>%rename(pred_mod_2=pred)
 g3<-ggplot(els,aes(x=byses1,y=bynels2m))
 g3<-g3+geom_point(alpha=.2,size=.25)
 
+#overlay a line that is the predictions from mod_2
 g3<-g3+geom_smooth(data=els,(aes(x=byses1,y=pred_mod_2)))
 
 g3<-g3+xlab("Socio Economic Status")+ylab("Test Scores")

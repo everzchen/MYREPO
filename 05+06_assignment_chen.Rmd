@@ -1,0 +1,140 @@
+---
+title: "05+06_assignment_chen"
+author: "Evelyn Chen"
+date: "10/12/2019"
+output: html_document
+---
+
+###Loading libraries and els.RData
+```{r,echo=FALSE}
+rm(list=ls())
+library(tidyverse)
+library(forcats)
+library(ModelMetrics)
+library(modelr)
+library(RColorBrewer)
+
+load("els.RData")
+```
+
+### 1 - Choose a dependent variable and plot that dependent variable as a function of of a continuous independent variable
+
+dependent variable: math score 'bynels2m'
+independent variable: reading score 'bynels2r'
+
+```{r}
+g1<-ggplot(data=els,
+           aes(x=bynels2r,y=bynels2m)
+           )
+
+g1<-g1+geom_point(alpha=.5,size=.25) # Add points at x and y
+g1<-g1+ylab("Math Test Scores")+xlab("Reading Test Scores")
+g1
+```
+The scatterplot suggests that as reading test scores increase, math test scores also tend to increase. There is a positive relationship between the independent and dependent variables.
+
+### 2 - Adjust the scale of either the dependent variable or independent variable.
+
+The NELS-equated estimated reading and math test scores (1992) scale range from 0-54 and 0-81, respectively. It makes sense to adjust the scale of either the independent and dependent variable.
+
+To determine the average math score, at every percentile level of reading score 'bynels2r', I will use the mutate command to create a new variable. The use of 'round' will help to get whole number percentiles, elimindating the possibility of having decimals. This will help tidy up the appearance of our scatterplot. 
+
+```{r}
+
+els_sum<-els%>%
+  mutate(read_rank=percent_rank(bynels2r)*100)%>%
+  mutate(read_rank_r=round(read_rank))%>%
+  group_by(read_rank_r)%>%
+  summarize(test_mean=mean(bynels2m,na.omit=TRUE))
+
+g2<-ggplot(els_sum,aes(x=read_rank_r,y=test_mean))
+
+g2<-g2+geom_point()
+
+g2<-g2+ylab("Average Math Test Scores")+xlab("Reading Test Percentile")
+
+g2
+
+```
+
+### 3 - Add a line of best fit to your graph.
+
+To above scatter plot indicates a fairly linear relationship between the percentile rank of reading scores ('read_rank') and the average math score ('test_mean') so it appears appropriate to eadd a linear regression line. To do this, I will use the 'geom_smooth(method="lm")' command.
+
+```{r}
+#add a linear regression line
+g2<-g2+geom_smooth(method="lm",colour="red")
+#add a smoothed, loess line
+g2<-g2+stat_smooth()
+g2
+```
+
+### 4 - Clean up the labeling and description of the graphic so that it could be presented to a broader audience.
+
+The graphic looks pretty clean, but I did add a descriptive title on the graph to further clarify what the content of the scatter plot demonstrates.
+
+```{r}
+g2<-print(g2+ggtitle("Average Math Scores Based on Reading Test Percentile Scores"))
+g2
+```
+
+### 5 - Include a few sentences describing what the graphic above shows.
+
+The scatterplot shows a positive relationship between reading test percentile rank and average math test scores. If a student has a higher percentile rank on the reading test, then they tend to also have a higher math score.
+
+Both the loess and lm estimates show this positive relationship. The linear regression line is colored red, and the loess line is colored blue. Although the two lines appear similar, the blue loess line is a non-parametric approach that presents a smooth trend line. The loess line is a common method used to smoothen out a trend line if the data appears to be quite volatile. Given our dataset, the linear regression line is a better model. It has more predictive ability, and subsequent regression models can be interpreted for statistical significance.
+
+### 6 - Create a regression that predicts reading scores as a function of SES plus one other covariate, using the training data.
+
+Loading the training data
+
+```{r}
+load("els_train.RData")
+```
+
+I will first create a simple bivariate regression model that predicts reading scores as a function of SES.
+dependent variable = 'bynels2r'
+independent variable = 'byses1'
+
+To do this, I will use the 'lm(outcome~predictor,data=filename) command.
+```{r}
+#Model 1: simple bivariate regression
+mod1<-lm(bynels2r~byses1,data=els_train) 
+summary(mod1)
+```
+
+The simple regression model indicates that there is a  relationship between socioeconomic status and reading test scores, because the coefficient of 5.52 is statistically significant. For every unit increase on the socioeconomic scale, there is a predicted 5.52 increase in reading score. 
+
+```{r}
+g3<-ggplot(els_train, aes(x=byses1,y=bynels2r))+ #specify data and x and y
+           geom_point(shape=1)+ #specify points
+           geom_smooth(method=lm) #ask for lm line
+g3<-g3+ylab("Socioeconomic Status")+xlab("Reading Test Score")
+g3
+```
+
+Let's add in a second variable: the parent's level of education. 
+
+```{r}
+##adding in parental education as an additional predictor, in addition to SES
+mod2<-lm(bynels2r~as.factor(bypared)+
+           byses1,
+          data=els_train)
+
+summary(mod2) 
+```
+
+### 7 - Report the RMSE from a validation of your model using the testing data.
+
+```{r}
+#Summary of the simple bivariate linear regression model
+summary(mod1)
+#Summary of the two-predictor regression model
+summary(mod2)
+```
+
+Adding a second predictor to our regression model further lowered the residual standard error from 8.562 to 8.551. This RMSE value gives us a sense of how wrong our model would be if we used either one or two predictors. Lowering the RMSE down to 8.551 means that in our two-predictor model, our model would be approximately 8.551 off in predicting math scores. 
+
+
+
+
