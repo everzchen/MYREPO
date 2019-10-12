@@ -15,6 +15,9 @@ library(plotly)
 library(Metrics)
 library(forcats)
 library(RColorBrewer)
+library(forcats)
+library(ModelMetrics)
+library(modelr)
 ```
 
 We will be using data from the Hass Avocado Board website, published in May 2018 and compiled into a CSV. 
@@ -51,10 +54,10 @@ gg<-gg+geom_bar()
 gg
 ```
 
-The dataset shows weekly retail data of avocado sales from 2015 - 2018. We are also interested in the distribution of the average price of avocados in this dataset. We will use the ggplot command to create a histogram of the 'AveragePrice' variable. 
+The dataset shows weekly retail data of avocado sales from 2015 - 2018. We are also interested in the distribution of the average price of avocados in this dataset. We will use the ggplot command to create a density plot of the 'AveragePrice' variable. 
 ```{r}
 gg<-ggplot(avocado,aes(x=AveragePrice))
-gg<-gg+geom_histogram(binwidth = 0.1,fill="lightblue")
+gg<-gg+geom_density()
 gg
 
 avocado%>%summarize(mean_AveragePrice=mean(AveragePrice,na.rm=TRUE))
@@ -64,8 +67,6 @@ avocado<-avocado%>%mutate(mean_AveragePrice=mean(AveragePrice,na.rm=TRUE))
 
 The distribution is fairly normal. The unconditional mean of 'AveragePrice' is 1.41. 
 
-
-
 ```{r error_terms}
 avocado<-avocado%>%mutate(e1=AveragePrice-mean_AveragePrice)
 rmse_averageprice<-rmse(avocado$AveragePrice,avocado$mean_AveragePrice)
@@ -73,20 +74,38 @@ rmse_averageprice
 ```
 On average, we would be off by $0.40 across the whole dataset. At first glance, this error may not seem very big, but 'AveragePrice' ranges from 0.44 to 3.25. A RMSE error value of $0.40 is fairly significant, in this context. 
 
-Density plots provide a continous graphic of the distribution of a variable:
-```{r}
-gg<-ggplot(at,aes(x=DistanceFromHome))
-gg<-gg+geom_density()
-gg
+We predict that avocado type is a predictor for its average price. It's likely that conventional avocados are not priced as high as the organic avocados. We will calculate the average price of avocados for each avocado type. To do this, we will create a new dataset, called avocado_type. Using the group_by command and the summarize command, we are going to create a new variable, 'averageprice_type' set equal to the mean average price of avocados for each of the two types. 
 
-## Changing bandwidth-- not recommended, just showing you how. It smooths out the density plot. Instead of the bandwidth = 1 mile, it is now 10 miles. 
-gg<-gg+geom_density(bw=10)
-gg
+```{r}
+avocado_type<-avocado%>%
+  group_by(type)%>%
+  summarize(averageprice_type=mean(AveragePrice))
+
+view(avocado_type)
 ```
 
+As anticipated, the average price of conventional avocados are cheaper, 1.16, is cheaper than the average price of organic avocados, 1.64. 
 
 
-Our primary outcome of interest will be AveragePrice. 
+
+
+
+To examine if the relationship between avocado type and average price is statistically significant, we want to run a linear regression model. The outcome variable, 'averageprice' has a nice symmetric distribution. It looks approximately normal, which meets the necessary assumptions in interpreting the results. 
+
+
+```{r}
+#Model 1: simple bivariate regression, linear model of average price (dep) as a function of avocado type (pred), data set=avocado
+mod1<-lm(AveragePrice~type,data=avocado) #outcome on left, predictor on right 
+
+summary(mod1)
+```
+The coefficient of the linear regression model is statistically significant. We can reject the null hypothesis that the coefficient is zero and conclude that there is a relationship between avocado type and its average price. 
+
+residual standard error = RMSE, 0.317. We are off by $0.317 dollars on average.
+
+
+
+
 
 
 The data represents weekly retail scan data for national retail volume and price. We are interested in looking at the historical data over time in regards to price, and we hypothesize whether fluctuations in unit price are correlated to political trade tensions (that may ultimately affect consumer demand). We also hope to determine whether certain regions of the country are resistant to economic/trade-related pressures. 
