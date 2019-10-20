@@ -1,0 +1,186 @@
+---
+title: "08-09-assignment_chen"
+author: "Evelyn Chen"
+date: "10/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(knitr)
+library(modelr)
+library(caret)
+library(forcats)
+library(ModelMetrics)
+```
+
+I went to the kaggle website, as directed, and I downloaded the data files associated with the "Don't get Kicked" competition. The competition is to predict if a car purchased at the Auction is a Kick - a bad buy. We will be using statistics to figure out which cars have a higher risk of being a kick, in an attempt to provide the best inventory selection possible to the customers of an auto dealership.
+
+The datasets were downloaded from the kaggle website, copied and pasted into my working directory, and then renamed. The following code will upload the datasets.
+
+```{r}
+#clear environment
+rm(list=ls())
+#load the datasets
+training<-read_csv(file="08-09-assignment_training.csv")
+test<-read_csv(file="08-09-assignment_test.csv")
+```
+
+### 1 - Calculate the proportion of lemons in the training dataset using the IsBadBuy variable.
+
+The dependent variable, 'IsBadBuy' denotes whether or not the car purchased was a lemon - a purchase that could have been avoided, The first command, table(), will tell us the raw number, and the second command, 'prop.table' will show us the proportion of cars identified as bad buys.
+
+```{r}
+table(training$IsBadBuy)
+prop.table(table(training$IsBadBuy))
+```
+In the training dataset, 64007 cars were not kicked, and 8976 cars were considered "lemons" - kicked vehicles. The output shows that 12.3% of the total cars purchased were considered lemons. 
+
+### 2 - Calculate the proportions of lemon by Make.
+
+
+To determine the proportion of lemon by the make of a car, we use the 'prop.table' command to change the raw counts to proportions. 
+
+```{r}
+prop.table(table(training$Make,training$IsBadBuy),margin=1)
+```
+
+There were 33 makes of cars in the entire dataset. When sorted based on this characteristic, none of the Hummer, Volvo, Toyoto Scion cars were lemons. Plymouth had one the highest proportions of lemons in the dataset, 0.50. Lexus, Infiniti, and Lincoln also had fairly high proportions of lemons, 0.35, 0.33, and 0.30, respectively.
+
+### 3 - Now, predict the probability of being a lemon using a linear model (lm(y~x)), with covariates of your choosing from the training dataset.
+
+I am curious to understand the extent to which the vehicle's age predicts the probability of a car being a lemon.
+
+```{r}
+summary(training$VehicleAge)
+```
+
+The variable, 'VehicleAge' is described as the years elapsed since the manufacturer's year. When I executed the summary command, the cars in this dataset range from 0 - 9 years, with an average of 4.177. 
+
+```{r}
+prop.table(table(training$VehicleAge,training$IsBadBuy),margin=1)
+```
+
+It appears that there is a position association between vehicle age and proportion of cars that are kicked back. None of the brand-new cars (vehicleage=0) were kicked back. One-, two-, three-year old cars show an incrementally higher proportion of lemons, and the proportion continues to increase up to the oldest cars in the dataset, 9 years. The following command runs a linear regression model of lemons as a function of vehicle age, using the training dataset. 
+
+```{r}
+#linear model of lemons as a function of vehicle age, data set=training
+mod1<-lm(IsBadBuy~VehicleAge,data=training) #outcome on left, predictor on right 
+
+summary(mod1)
+```
+
+### 4 - Make predictions from the linear model.
+
+The relationship between vehicle age and car kick-back is statistically significant (p<0.001). We can reject the null hypothesis that the coefficient is zero. The coefficient of 'vehicleage' is 0.03, which suggests that for every additional year in the age of a vehicle, the proportion/likelihood of a car being a lemon increases by .03. The residual standard error, the RMSE, is 0.3238. This suggests that on average, our linear regression model is off by 0.3238. 
+
+### 5 - Now, predict the probability of being a lemon using a logistic regression (glm(y~x,family=binomial(link="logit"))), again using covariates of your choosing.
+
+
+Logistic regression is set up to handle binary outcomes as the dependent variable. It follows that the logistic regression is appropriate to use, because our chosen dependent variable, IsBadBuy, reveals a binary outcome. We will use the command 'glm(y~x,family=binomal(link="logit"))' to run this logistic regression model. 
+
+```{r}
+logit_mod<-glm(IsBadBuy~
+            VehicleAge,
+             data=training,
+            na.action=na.exclude,
+            family=binomial(link="logit"),
+               y=TRUE)
+
+summary(logit_mod)
+```
+
+The association between the covariate (VehicleAge) and outcome (IsBadBuy) is statistically significant, and the association is positive. 
+
+### 6 - Make predictions from the logit model. Make sure these are probabilities.
+
+The logistic regression model demonstrates a statistically significant relationship between vehicle age and the outcome variable, 'IsBadBuy'. It is likely that the age of the car is significantly correlated to the proportion of cars that are kicked-back.
+
+With these results, we can generate predicted probabilities. To do this, we will use the 'predict' command, specifying to use the logistic regression model, 'logit_mod' and the type of response="response" specifies that we want the predicted probabilities. The new predicted probabilities are labeled with a new variable, 'pred_logit'.
+
+```{r}
+training<-training%>%
+  mutate(pred_logit=predict(logit_mod,type="response"))
+
+summary(training$pred_logit)
+```
+
+The summary command show that the predicted probabilities range from 0.037 to 0.338. In other words, the logistic model predicts that the predicted percentage of kickback cars range from 3.7% to 33.8%. The average predicted probability is 0.122 or 12.2%. None of the predicted probabilities are above 0.5 or 50%. 
+
+We can convert the predictions to a binary variable by setting a "threshold" of .3. Any prediction above .3 is considered to be a 1 (car is a bad buy), anything below, a 0 (car is not a bad buy).
+
+```{r}
+training<-training%>%
+    mutate(pred_logit_out=ifelse(pred_logit>=.3,1,0))
+```
+
+### 7 - Create a confusion matrix from your linear model and your logit model.
+confusionMatrix(training$IsBadBuy,training$pred_logit,cutoff=0.3)
+Now we create a confusion matrix to see how we did. 
+```{r}
+confusionMatrix<-confusionMatrix(training$pred_logit_out,training$IsBadBuy)
+rownames(confusionMatrix)<-c("Predicted 0","Predicted 1")
+colnames(confusionMatrix)<-c("Actual 0", "Actual 1")
+confusionMatrix
+```
+
+The confusion matrix shows that of the 8976 cars that were predicted to be lemons, only 202 cars were truly lemons. Furthermore, 64007 cars were not predicted to be lemons, but 444 of them were a bad buy.
+
+It's likely that if we changed the classification threshold, lowering it down further, our sensitivity and specificity of the model may improve. 
+
+### 8 - Plot the probability of a car being a bad buy by make.
+
+I will use my logistic regression model from earlier (question #6), which examined the relationship between vehicle age and the outcome variable, 'IsBadBuy'. We previously generated predicted probabilities, labeled it with a new variable 'pred_logit.'
+
+To plot the probability of a car being a bad buy by make, we will use 'Make' as the independent variable and 'pred_logit' as the dependent variable. The command 'ggplot' and 'geom_bar' will create a bar plot. 
+
+```{r}
+gg<-ggplot(training,aes(x=Make,y=pred_logit))
+gg<-gg+geom_bar(stat="identity", position="dodge")
+gg<-gg+xlab("Vehicle Make")+ylab("Predicted Probability of Car Being a Bad Buy")
+gg<-gg+coord_flip()
+gg
+```
+
+I'm second-guessing my answer from above, because the predicted probabilities were based on examining the association between vehicle age and the outcome variable. The predicted probabilities were based on the logistic model I ran earlier in question #5 and #6. So, I decided to conduct a quick linear regression model of lemons as a function of the vehicle make. Then, I created a new variable of predicted probabilities ('pred_lm_make') based on this regression model. I feel as though the predicted probabilities better answer the question.  
+
+```{r}
+#linear model of lemons as a function of car make, data set=training
+mod2<-lm(IsBadBuy~Make,data=training) #outcome on left, predictor on right 
+
+summary(mod2)
+
+training<-training%>%
+  mutate(pred_lm_make=predict(mod2,type="response"))
+
+summary(training$pred_lm_make)
+```
+
+The commands below will plot the predicted probabilities as a bar plot. 
+
+```{r}
+gg<-ggplot(training,aes(x=Make,y=pred_lm_make))
+gg<-gg+geom_bar(stat="identity",position="dodge")
+gg<-gg+xlab("Vehicle Make")+ylab("Predicted Probability of Car Being a Bad Buy")
+gg<-gg+coord_flip()
+gg
+```
+
+### 9 - Create a table that shows the probability of a car being a bad buy by make.
+
+We can display this information by showing a crosstab of 'IsBadBuy' with the independent variable of 'Make.' By using the command 'prop.table' we can display the information as proportions. Then, by using the command, 'round(tab_make_prop*100,1)' we can display the information as a percentage.
+
+```{r}
+tab_make<-with(training,table(Make,IsBadBuy))
+colnames(tab_make)<-c("Not Kicked Back","Kicked Back")
+kable(tab_make)
+tab_make_prop<-prop.table(tab_make,margin=1)
+kable(tab_make_prop)
+kable(round(tab_make_prop*100,1))
+```
+
+The proportion of cars that are kicked back and not kicked back indicates the probability of a car being a bad buy, sorted by make. The likelihood of a car being kicked back, as sorted by the make of a car, is displayed as a percentage. 
