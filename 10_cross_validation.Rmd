@@ -49,6 +49,7 @@ gg
 
 We can run this model on the full dataset, but we're not taking advantage of the idea of cross-validation. 
 
+
 ```{r}
 ## Define the model
 mod1_formula<-formula(home_rank~coll_grad_pc+
@@ -60,6 +61,8 @@ basic.mod<-lm(mod1_formula,
 ```
 
 The `crossv_kfold` command creates a list of datasets from our original dataset, each of which contains a testing and training dataset. The proportion of cases held out for testing is determined by the number of folds: 10 folds would indicate 1/10 of the data to be held out. 
+
+So we're going to divide the dataset into 20 different parts, each time it's going to hold out one part and run the model with the other 19 parts. 
 
 ```{r}
 pd_cf<-pd%>%
@@ -84,6 +87,7 @@ rmse_mod1<-pd_cf %>%
 The resulting dataset includes the id for the cross validation and the rmse. We can summarize and plot this new data frame to see what our likely range of rmse happens to be. 
 
 ```{r}
+rmse_mod1
 summary(rmse_mod1$rmse)
 
 gg<-ggplot(rmse_mod1,aes(rmse))

@@ -1,0 +1,125 @@
+---
+title: "10-assignment-chen"
+author: "Evelyn Chen"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Loading Libraries
+```{r}
+library(tidyverse)
+library(modelr)
+library(caret)
+
+#clear environment
+rm(list=ls())
+```
+
+For this assignment, I will use the 'pd.Rdata' which contains 3088 observations of 55 variables. It contains a variety of information about each county, including demographic information and information about median household income, per capita income, rate of homeownership, and education level. 
+
+```{r}
+load("pd.Rdata")
+```
+
+I am going to run a simple model that predicts median home values in the county as a function of household income and poverty. 
+
+dependent variable - 'median_home_val'
+predictors - 'median_hh_inc', 'persons_below_poverty'
+
+The following command selects the variables of interest to me, converts median_home_val to a percentage rank, and presents it as a new table. 
+```{r}
+pd<-pd%>%
+  select(median_home_val,median_hh_inc,persons_below_poverty,homeown_rate,per_capita_inc)%>%
+  mutate_all(funs(as.numeric))%>%
+  mutate(home_rank=percent_rank(median_home_val))%>%
+  tbl_df()
+```
+
+I will run a simple linear regression model to examine the extent to which the household income and poverty predicts the percentage rank of median household value. 
+
+```{r}
+mod1_formula<-formula(home_rank~persons_below_poverty+
+                       median_hh_inc)
+## Run the model against all of the data
+basic.mod<-lm(mod1_formula,
+              data=pd); summary(basic.mod)
+```
+The summary output of the linear regression model suggests that there is a statistically significant relationship, and both persons_below_poverty and median_hh_inc are significant predictors of median home value. The RMSE value is 0.2164, which suggests that our model is, on average, off by 21.6%. This error in predicting median home value is quite large, which is a concern.
+
+### 1 - Create a 10-fold cross validation of your predictor (linear regression) OR classifier (logistic regression, decision tree, or other). Provide a summary table or graphic of the RMSEs or accuracies from the cross validation.
+
+The `crossv_kfold` command creates a list of datasets from our original dataset, each of which contains a testing and training dataset. The proportion of cases held out for testing is determined by the number of folds: 10 folds would indicate 1/10 of the data to be held out. 
+
+So we're going to divide the dataset into 10 different parts, each time it's going to hold out one part and run the model with the other 9 parts. 
+
+```{r}
+pd_cf<-pd%>%
+  crossv_kfold(10)
+pd_cf
+```
+
+The next bit of code starts by converting all of the individual training datasets to tibbles. Then the model is run on each training dataset. The predictions from the model are applied to each testing dataset, and finally pull the rmse from each of the testing datasets. 
+
+```{r}
+rmse_mod1<-pd_cf %>% 
+  mutate(train = map(train, as_tibble)) %>% ## Convert to tibbles
+  mutate(model = map(train, ~ lm(mod1_formula,
+                                 data = .))) %>%
+  mutate(rmse = map2_dbl(model, test, rmse)) %>% ## apply model, get rmse
+  select(.id, rmse) ## pull just id and rmse 
+
+rmse_mod1
+summary(rmse_mod1$rmse)
+```
+
+After running the cross-fold validation process, the summary of the  RMSE values show an average of 0.2166, and the range of RMSE is from 0.2045 to 0.2328. The following graphic shows a density plot.
+
+```{r}
+gg<-ggplot(rmse_mod1,aes(rmse))
+gg<-gg+geom_density(bins=50,fill="orange",alpha=.2)
+gg
+```
+
+
+### 2 - Using a random partition, create 100 separate cross validations of your linear model predicting reading scores as a function of at least two covariates. Provide a summary table or graphic of the RMSEs from this cross validation. 
+
+
+The `crossv_mc` command provides for a generalization of the crossfold command. For this command, we can specify the proportion to be randomly held out in each iteration, via `test=p` where `p` is the proportion to be held out. The `pd_cv` dataset is a dataset of 100x2 datasets, with each row containing a training and testing dataset. The testing dataset is .2 of the sample, but it's different each time. 
+
+```{r}
+pd_cv<-pd%>%
+  crossv_mc(n=100,test=.2)
+pd_cv
+```
+
+```{r}
+mod1_rmse_cv<-pd_cv %>% 
+  mutate(train = map(train, as_tibble)) %>% ## Convert to tibbles
+  mutate(model = map(train, ~ lm(mod1_formula, data = .)))%>%
+  mutate(rmse = map2_dbl(model, test, rmse))%>% 
+  select(.id, rmse) ## pull just id and rmse 
+
+mod1_rmse_cv
+summary(mod1_rmse_cv$rmse)
+```
+Using a random partition, the RMSE summary shows an average of 0.2167 and the range is 0.2068 to 0.2259.
+
+```{r}
+gg<-ggplot(mod1_rmse_cv,aes(rmse))
+gg<-gg+geom_density(bins=50,fill="blue",alpha=.2)
+gg
+
+```
+
+Comparing the two different cross-validated models, it is worth showing that the range of RMSE differs. We can use this information to choose which model will perform best in predicting median household value. 
+
+```{r}
+gg<-ggplot(rmse_mod1,aes(x=rmse))
+gg<-gg+geom_density(fill="orange",alpha=.2)
+gg<-gg+geom_density(data=mod1_rmse_cv,aes(x=rmse),fill="blue",alpha=.2)
+gg
+```
