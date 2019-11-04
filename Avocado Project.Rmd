@@ -63,22 +63,86 @@ Because we will be exploring price fluctuations in various regions of the countr
 
 
 ### Tidying Data
-```{r}
-#Rename Columns
-colnames(avocado)[colnames(avocado)=="Total Volume"]<- "TotalVolume"
-colnames(avocado)[colnames(avocado)=="Total Bags"]<- "TotalBags"
-colnames(avocado)[colnames(avocado)=="Small Bags"]<- "SmallBags"
-colnames(avocado)[colnames(avocado)=="Large Bags"]<- "LargeBags"
-colnames(avocado)[colnames(avocado)=="XLarge Bags"]<- "XLargeBags"
-```
-
 
 ```{r}
+##renaming coumn so that it works in ggplot
+colnames(avocado)[colnames(avocado)=="AveragePrice"] <- "Average_Price"
+colnames(avocado)[colnames(avocado)=="Total Volume"] <- "Total_Volume"
+colnames(avocado)[colnames(avocado)=="Total Bags"] <- "Total_Bags"
+colnames(avocado)[colnames(avocado)=="Small Bags"] <- "Small_Bags"
+colnames(avocado)[colnames(avocado)=="Large Bags"] <- "Large_Bags"
+colnames(avocado)[colnames(avocado)=="XLarge Bags"] <- "XLarge_Bags"
+colnames(avocado)[colnames(avocado)=="type"] <- "Type"
+colnames(avocado)[colnames(avocado)=="year"] <- "Year"
+colnames(avocado)[colnames(avocado)=="region"] <- "Region"
 
-
-avocado%>%rename(region="Albany")%>%mutate(region="Northeast")
+avocado<-avocado%>%
+  mutate(Volume_Rank=percent_rank(Total_Volume))
 
 ```
+
+```{r}
+#I added a column called 'US_region' and recoded the continuous variables in 'region' to be consistent according to the guide on the website: 
+avocado$US_region<-NA
+
+avocado$US_region[avocado$Region=="Albany"]<-"Northeast"
+avocado$US_region[avocado$Region=="Atlanta"] <- "Southeast"
+avocado$US_region[avocado$Region=="BaltimoreWashington"] <- "Mid-South"
+avocado$US_region[avocado$Region=="Boise"] <- "West"
+avocado$US_region[avocado$Region=="Boston"] <- "Northeast"
+avocado$US_region[avocado$Region=="BuffaloRochester"] <- "Northeast"
+avocado$US_region[avocado$Region=="California"] <- "California"
+avocado$US_region[avocado$Region=="Charlotte"] <- "Mid-South"
+avocado$US_region[avocado$Region=="Chicago"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="CincinnatiDayton"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="Columbus"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="DallasFtWorth"] <- "South Central"
+avocado$US_region[avocado$Region=="Denver"] <- "West"
+avocado$US_region[avocado$Region=="Detroit"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="GrandRapids"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="GreatLakes"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="HarrisburgScranton"] <- "Northeast"
+avocado$US_region[avocado$Region=="HartfordSpringfield"] <- "Northeast"
+avocado$US_region[avocado$Region=="Houston"] <- "South Central"
+avocado$US_region[avocado$Region=="Indianapolis"] <- "Great Lakes"
+avocado$US_region[avocado$Region=="Jacksonville"] <- "Southeast"
+avocado$US_region[avocado$Region=="LasVegas"] <- "West"
+avocado$US_region[avocado$Region=="LosAngeles"] <- "California"
+avocado$US_region[avocado$Region=="Louisville"] <- "Mid-South"
+avocado$US_region[avocado$Region=="MiamiFtLauderdale"] <- "Southeast"
+avocado$US_region[avocado$Region=="Midsouth"] <- "Mid-South"
+avocado$US_region[avocado$Region=="Nashville"] <- "Mid-South"
+avocado$US_region[avocado$Region=="NewOrleansMobile"] <- "Southeast"
+avocado$US_region[avocado$Region=="NewYork"] <- "Northeast"
+avocado$US_region[avocado$Region=="Northeast"] <- "Northeast"
+avocado$US_region[avocado$Region=="NorthernNewEngland"] <- "Northeast"
+avocado$US_region[avocado$Region=="Orlando"] <- "Southeast"
+avocado$US_region[avocado$Region=="Philadelphia"] <- "Northeast"
+avocado$US_region[avocado$Region=="PhoenixTucson"] <- "West"
+avocado$US_region[avocado$Region=="Pittsburgh"] <- "Northeast"
+avocado$US_region[avocado$Region=="Plains"] <- "Plains"
+avocado$US_region[avocado$Region=="Portland"] <- "West"
+avocado$US_region[avocado$Region=="RaleighGreensboro"] <- "Mid-South"
+avocado$US_region[avocado$Region=="RichmondNorfolk"] <- "Mid-South"
+avocado$US_region[avocado$Region=="Roanoke"] <- "Mid-South"
+avocado$US_region[avocado$Region=="Sacramento"] <- "California"
+avocado$US_region[avocado$Region=="SanDiego"] <- "California"
+avocado$US_region[avocado$Region=="SanFrancisco"] <- "California"
+avocado$US_region[avocado$Region=="Seattle"] <- "West"
+avocado$US_region[avocado$Region=="SouthCarolina"] <- "Mid-South"
+avocado$US_region[avocado$Region=="SouthCentral"] <- "South Central"
+avocado$US_region[avocado$Region=="Southeast"] <- "Southeast"
+avocado$US_region[avocado$Region=="Spokane"] <- "West"
+avocado$US_region[avocado$Region=="StLouis"] <- "Plains"
+avocado$US_region[avocado$Region=="Syracuse"] <- "Northeast"
+avocado$US_region[avocado$Region=="Tampa"] <- "Southeast"
+avocado$US_region[avocado$Region=="West"] <- "West"
+avocado$US_region[avocado$Region=="WestTexNewMexico"] <- "West"
+
+
+##footnote: I elected to categorize 'WestTexNewMexico' as 'West,' rather than as 'South Central.'
+```
+
 
 ##Exploratory Data Analysis
 
