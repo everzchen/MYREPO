@@ -1,13 +1,15 @@
 ---
 title: "Avocado Project"
-author: "Evelyn Chen, Christen Paryzch"
+author: "Evelyn Chen, Christen Parzych"
 date: "10/12/2019"
 output: html_document
 ---
-# Research topic: ‘Guac’-Bottom Exploring Avocados’ Fluctuating Prices
+# Research Topic: ‘Guac’-Bottom: Exploring Avocados’ Fluctuating Prices
 
-Loading libraries
+
 ```{r  include=FALSE}
+
+rm(list=ls())
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
 library(tidyverse)
@@ -18,54 +20,74 @@ library(RColorBrewer)
 library(forcats)
 library(ModelMetrics)
 library(modelr)
+library(dplyr)
+library(tidyr)
+
 ```
 
 ## Introduction
-  The avocado is America’s ‘it’ fruit, so much so that it has become a running joke—headlines tell us that millennials choose avocados over, say, homeownership (Cummings, 2019). In spite of the hyperbole, the avocado has become an obsession Americans love to love. The evidence backs this claim: within the last week alone (October 6, 2019), U.S. consumers purchased 48,778,842 pounds of avocado—that’s a lot of avocado toast (Hass Avocado Board, 2019)! Mexico leads the world in avocado production, followed by the United States, where over 90% of avocado production occurs in California (Dekevich, 2018). 
-  This exploratory report utilizes data from the Hass Avocado Board website, published in May 2018 and compiled into a CSV. The Hass Avocado Board is an agricultural advocacy group founded to promote the consumption of avocados within the United States. The dataset includes weekly retail scan data for national retail (grocery, mass, club, drug, dollar, and military) volume price, including 18,249 observations of 16 variables from 2015–2018. 
-	We seek to explore a central question: are the price fluctuations in U.S. avocado-producing regions steadier/smaller than in non-avocado-producing regions? We are also interested in investigating whether the average price of Avocados is lower in avocado-producing regions. Finally, to what extent do region and avocado type predict the average price of avocados?
+  The avocado is America’s ‘it’ fruit, so much so that it has become a running joke—headlines tell us that millennials choose avocados over, say, homeownership (Cummings, 2019). In spite of the hyperbole, the avocado has become an obsession Americans love to love. The evidence backs this claim: within the last week alone (October 6, 2019), U.S. consumers purchased 48,778,842 pounds of avocado—that’s a lot of avocado toast (Hass Avocado Board, 2019)! Mexico leads the world in avocado production, followed by the United States. California produces 90% of American avocados, with Florida and Hawaii rounding out the other 10% (Dekevich, 2018). 
+  
+  This exploratory report utilizes data from the Hass Avocado Board website, published in May 2018 and compiled into a CSV. The Hass Avocado Board is an agricultural advocacy group founded to promote the consumption of avocados within the United States. The dataset includes weekly retail scan data for national retail (grocery, mass, club, drug, dollar, and military) volume and price, including 18,249 observations of 13 variables from 2015 - 2018.  
+  
+  We seek to explore a central question: are the price fluctuations in U.S. avocado-producing regions steadier/smaller than in non-avocado-producing regions? We are also interested in investigating whether the average price of avocados is lower in avocado-producing regions. Finally, to what extent does domestic origin or avocado type predict the average price of avocados?
 
 ```{r}
-rm(list=ls())
+#load dataset
 avocado<-read_csv(file="avocado.csv")
 ```
 
 ## Data
-The data represents weekly retail scan data for National review volume and price, from 2015 - 2018. The retail scan data comes directly from retailers' cash registers, which reflects actual retail sales of Hass avocados. This is a quick explanation of the variables in the dataset.
+  We elected to use the entire dataset for this project, rather than a sample. The data represents weekly retail scan data for national retail volume and price from 2015 - 2018. This retail scan data comes directly from retailers' cash registers, reflecting actual retail sales of Hass avocados. The dataset has 18,249 observations of 13 variables, descriptions of which are located in the table below: 
 
-Date: Date of observation
-AveragePrice: the average price of a single avocado
-Total Volume: total volume of avocados sold (pounds)
-Total bags: total number of bags of avocados sold
-Small bags: total number of small bags of avocados sold
-Large bags: total number of large bags of avocados sold
-XLarge Bags: total number of extra large bags of avocados sold
-Type: conventional or organic
-Year: the year
-Region: the city or region of the sale
-Total volume: total number of avocados sold
-4046: total number of small/medium PLU 4046 avocados sold
-4225: total number of large PLU 4225 avocados sold
-4770: total number of extra-large PLU 4770 avocados sold
+```{r}
 
-The data is largely consistent, with the exception of ‘region,’ which is a mix of cities, states, and regions of the country. We have elected to use regions of the country as our consistent characterization; we will need to clean up the data in line with the Hass Avocado Board’s existing regional categorizations for the continental U.S.:
 
-•	California
-•	West – Washington, Oregon, Idaho, Nevada, New Mexico, Montana, Colorado, Utah, Arizona, Wyoming
-•	South Central – Texas, Oklahoma, Arkansas, Louisiana
-•	Plains – North Dakota, South Dakota, Nebraska, Minnesota, Iowa, Kansas, Missouri
-•	Great Lakes – Wisconsin, Indiana, Illinois, Ohio, Michigan
-•	Southeast – Alabama, Mississippi, Georgia, South Carolina, Florida
-•	Mid-South – Tennessee, Kentucky, North Carolina, Virginia, West Virginia, Maryland
-•	Northeast – Maine, Vermont, New Hampshire, Massachusetts, Rhode Island, Connecticut, New York, Pennsylvania, New Jersey, Delaware
+variable_table <- matrix(c("Date","Date of observation", 
+              "AveragePrice","Average price of a single avocado", 
+              "Total Volume","Total volume of avocados sold in pounds", 
+              "4046","Total number of small/medium PLU 4046 avocados sold", 
+              "4225","Total number of large PLU 4225 avocados sold", 
+              "4770","Total number of extra-large PLU 4770 avocados sold",
+              "Total bags","Total number of bags sold", 
+              "Small bags","Total number of small bags sold", 
+              "Large bags","Total number of large bags sold", 
+              "Xlarge bags","Total number of extra-large bags sold", 
+              "Type","Conventional or organic", 
+              "Year","Year sold", 
+              "Region","City, state, or region sold"), ncol=2, byrow=TRUE)
+             
+colnames(variable_table) <- c("Variable Name","Description")
+rownames(variable_table) <- c(
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13)
 
-Because we will be exploring price fluctuations in various regions of the country, we expect our analysis to focus on the following variables: average price, size of avocado, type, year purchased, and region purchased. Based on the available data, we will first identify a normal range for avocado prices according to region and then determine when avocado prices fell outside of this range from 2015 to 2018. The Hass Avocado Board provides rich and accessible data, so depending on the final scope of our project, we might integrate more in-depth, region-specific analyses into our report as well. 
+variable_table <- as.table(variable_table)
 
+kable(variable_table)
+```
+
+The majority of the variables in our dataset are continuous: "AveragePrice," "Total Volume," "4046," "4225," "4770," "Total bags," "Small bags," "Large bags," and "Xlarge bags." The variables "Type," "Year," and "Region" are categorical. 
+
+Because we are exploring price fluctuations in various regions of the country, our analysis focuses on the following variables: average price, avocado size, avocado type, purchase year, and purchase region. Based on the available data, we first identified a normal range for avocado prices according to region and then determined when avocado prices fell outside of this range from 2015 to 2018. The Hass Avocado Board provides rich and accessible data, so we also integrated more in-depth, region-specific analyses into our report as well. 
 
 ### Tidying Data
 
+Our data required minimal tidying; however, there were a few opportunities to clean up the data. First we renamed most of the columns in a format that would work with the 'ggplot' package later on in the project. This involved removing character spaces and replacing with underscores. We then created a new variable, called 'Volume_Rank,' to establish a percentile rank of total volume.
+
 ```{r}
-##renaming coumn so that it works in ggplot
+##renaming column so that it works in ggplot
 colnames(avocado)[colnames(avocado)=="AveragePrice"] <- "Average_Price"
 colnames(avocado)[colnames(avocado)=="Total Volume"] <- "Total_Volume"
 colnames(avocado)[colnames(avocado)=="Total Bags"] <- "Total_Bags"
@@ -81,8 +103,39 @@ avocado<-avocado%>%mutate(Volume_Rank=percent_rank(Total_Volume))
 
 ```
 
+The data is largely consistent, with the exception of ‘region,’ which contains a mix of cities, states, and regions of the country. To maintain consistency throughout our analysis, we elected to recode this variable into regions. We used the Hass Avocado Board's existing regional classifications for the continental U.S. as our consistent characterization:
+
 ```{r}
-#I added a column called 'US_region' and recoded the continuous variables in 'region' to be consistent according to the guide on the website: 
+region_table <- matrix(c(
+              "California","California", 
+              "West","Washington, Oregon, Idaho, Nevada, New Mexico, Montana, Colorado, Utah, Arizona, Wyoming", 
+              "South Central","Texas, Oklahoma, Arkansas, Louisiana", 
+              "Plains","North Dakota, South Dakota, Nebraska, Minnesota, Iowa, Kansas, Missouri", 
+              "Great Lakes","Wisconsin, Indiana, Illinois, Ohio, Michigan", 
+              "Southeast","Alabama, Mississippi, Georgia, South Carolina, Florida",
+              "Mid-South","Tennessee, Kentucky, North Carolina, Virginia, West Virginia, Maryland", 
+              "Northeast","Maine, Vermont, New Hampshire, Massachusetts, Rhode Island, Connecticut, New York, Pennsylvania, New Jersey, Delaware"), ncol=2, byrow=TRUE)
+             
+colnames(region_table) <- c("Region Name","State(s)")
+rownames(region_table) <- c(
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8)
+
+region_table <- as.table(region_table)
+
+kable(region_table)
+```
+
+We then created a new column ('US_region') and recategorized the data to align with published categorizations. This recoding resulted in eight observational labels for the region variable: California, West, South Central, Plains, Great Lakes, Southeast, Mid-South, and Northeast.
+
+```{r}
+
 avocado$US_region<-NA
 
 avocado$US_region[avocado$Region=="Albany"]<-"Northeast"
@@ -142,7 +195,7 @@ avocado$US_region[avocado$Region=="WestTexNewMexico"] <- "West"
 ##footnote: I elected to categorize 'WestTexNewMexico' as 'West,' rather than as 'South Central.'
 ```
 
-Rows of observations in the 'avocado' dataset contained sales information from the region 'TotalUS'. It is unclear what this region referred to; no additional information was found online with regards to this information. Christen and Evelyn both decided it was appropriate to delete this subset of data and not include it in our data analysis. 
+Observations titled 'WestTexNewMexico' did not align with any of the eight published categorizations. Because the description is relatively specific to a geographic area located in the far western United States, we elected to include these observations under 'West.' In terms of data limitations, this dataset only includes data related to the continental United States. As a result, we are missing information related to a major U.S. avocado producer: Hawaii. Furthermore, the dataset's sales and volume information does not differentiate between domestic and imported avocados, so we are unable to explore the effect of a region's proximity to an international avocado producer (i.e., South Central and Mexico) on avocado prices. Additionally, 338 rows of observations in the 'avocado' dataset contained sales information from the region categorized as 'TotalUS'. It is unclear what this region referred to, and we were unable to locate additional information. As a result we decided it was appropriate to exclude this subset of data and not include it in our data analysis. 
 
 ```{r}
 #Deleted rows of data: avocado$region == 'TotalUS'
@@ -150,54 +203,65 @@ Rows of observations in the 'avocado' dataset contained sales information from t
 avocado_tidy<-avocado%>%filter(str_detect(Region, "TotalUS", negate = TRUE))
 
 ```
-A total of 338 observations were deleted. The 'avocado_tidy' dataset now contains 17911 observations. We will use the 'avocado_tidy' dataset for the remainder of our analysis.
+This action deleted 338 total observations from our dataset. We created a new dataset titled 'avocado_tidy' for the remainder of our analysis. The 'avocado_tidy' dataset now contains 17,911 observations of 16 variables.
 
 ## Exploratory Data Analysis
 
-In this project, we aim to explore the price fluctations in avocado sales throughout the United States. The dataset shows weekly retail data of avocado sales from 2015 - 2018. 
+In this project, we explore price fluctations in avocado sales throughout the United States. The dataset shows weekly retail data of avocado sales from 2015 - 2018. 
 
-Our primary outcome of interest is the average price of avocados - 'Average_Price'. This is a continous variable. We are interested in the distribution of the average price of avocados in this dataset. We will use the ggplot command to create a density plot of the 'AveragePrice' variable. 
+Our primary outcome of interest is the average price of avocados - 'Average_Price'. This is a continuous variable. To determine the average price distribution of avocados in this dataset, we used the 'ggplot' command to create a density plot for the 'AveragePrice' variable. 
 
 ```{r}
 gg<-ggplot(avocado_tidy,aes(x=Average_Price))
 gg<-gg+geom_density()
+gg<-gg+xlab("Average Price")
+gg<-gg+ylab("Density")
+gg<-gg+ggtitle("Average Price Density Plot")
 gg
 
 summary(avocado_tidy$Average_Price)
 ```
-The unconditional mean of 'Average_Price' is 1.41, and the average avocado prices range from 0.440 - 3.25. The density plot shows that the distribution of the average avocado prices is unimodal and approximately normal.
+The unconditional mean of 'Average_Price' is $1.41, and the average avocado prices range from $0.44 - $3.25. The density plot shows that the distribution of average avocado prices is unimodal and approximately normal.
 
 ### Changes in Average Price by Year
-We predict that the average price of avocados vary by year - 'Year' is a likely predictor for average price, as the market trends reflect trends of supply, demand, and market inflation. We will calculate average prices of avocado at each year and look athe dataset. To do this, we are going to greate a new dataset, 'avocado_year'. Using the group_by command and the summarize command, we are going to create a new variable 'avg_price_year' set equal to the mean average price for each year. 
+We predict that the average price of avocados varies from year to year: 'Year' is a likely predictor for average price, as the market trends reflect the effects of supply, demand, and market inflation. In the commands below, we calculated the average prices of avocado for each year. To do this, we generated a dataset called 'avocado_year'. Using the 'group_by' and 'summarize' command, we created a new variable --'avg_price_year'-- set equal to the mean average price for each year. 
 
 ```{r}
 avocado_year<-avocado_tidy%>%group_by(Year)%>%summarize(avg_price_year=mean(Average_Price))
-
 avocado_year
+
+avocado_year_table <- avocado_year
+colnames(avocado_year_table)<-c("Year","Average Price")
+kable(avocado_year_table, align=rep('l', length(avocado_year_table[,1])))
 ```
 
-The average price of avocadoes in 2015 was 1.38, and the yearly average price rose in 2017 to 1.52, and it dropped back down in 2018 to 1.35. We will present this information in a bar graph.
+
+The average price of avocadoes in 2015 was $1.38. The average price in 2017 increased to $1.52 before dropping back down to $1.35 in 2018. We created a bar graph to present this information: 
 
 ```{r}
 ## Bar Plot with aesthetics: average price as height, year as category
-gg<-ggplot(avocado_tidy,aes(x=Year,y=Average_Price))
+gg<-ggplot(avocado_year,aes(x=Year,y=avg_price_year))
 gg<-gg+geom_bar(stat="Identity",fill="blue")
 gg<-gg+ylab("Average Price of Avocadoes")
 gg<-gg+ggtitle("Average Price of Avocadoes from 2015 to 2018")
 gg
 ```
 
-### Changes in Average Volume of Avocadoes by Year
-We speculated that the average price of avocadoes in 2017 was particularly high because the volume of avocados sold was particularly low. The total volume of avocados sold, 'Total_Volume' is a continuous variable. The volume of avocados sold ranges from 85 pounds to 11,274,749 pounds. The mean total volume is 539,259 pounds. To explore this, we used the group_by and summarize command to determine the average volume of avocadoes sold in 2015, 2016, 2017, and 2018. A bar plot was created from this data to help visualize the patterns observed.
+### Changes in Average Volume of Avocadoes Sold by Year
+We speculate that the average price of avocadoes in 2017 was particularly high because the volume of avocados sold was particularly low. The total volume of avocados sold ('Total_Volume') is a continuous variable. The volume of avocados sold ranges from 85 pounds to 11,274,749 pounds. The mean total volume is 539,259 pounds. To explore this further, we used the 'group_by' and 'summarize' commands to determine the average volume of avocadoes sold in 2015, 2016, 2017, and 2018, respectively. We then created a bar plot from this data to help visualize the observed patterns.
 ```{r}
 summary(avocado_tidy$Total_Volume)
 ```
 
 ```{r}
 avocado_vol<-avocado_tidy%>%group_by(Year)%>%summarize(avg_vol=mean(Total_Volume))
-
 avocado_vol
+
+avocado_vol_table <- avocado_vol
+colnames(avocado_vol_table)<-c("Year","Average Total Volume")
+kable(avocado_vol_table, align=rep('l', length(avocado_vol_table[,1])))
 ```
+
 
 ```{r}
 ## Bar Plot with aesthetics: mean total volume of avocadoes sold is the outcome variable, sorted by year
@@ -208,10 +272,10 @@ gg<-gg+ggtitle("Mean Volume of Avocadoes Sold from 2015 to 2018")
 gg
 ```
 
-The volume of avocadoes sold increased fairly steadily from 2015 to 2018, the most volume of avocadoes sold was the highest in 2018 at 675397.9. It does not seem likely that the volume of avocadoes sold influences the average price of avocadoes sold. The trends observed in the previous two bar plots do not suggest a strong association.
+Avocado sales increased fairly steadily from 2015 to 2018, with 2018 representing the highest volume sold, at 675397.9 pounds. However, based on the trends observed in the previous two bar plots, there does not appear to be a strong association between the volume of avocadoes sold and the average price. 
 
-### Two Predictors: Summarize average price by avocado type and year
-Perhaps the average price of avocadoes vary based on whether or not the avocadoes sold were grown by conventional or organic methods of farming. Organic farming utilizes more stringent farming methods (citation?) and likely increases cost on farmers. 
+### Two Predictors: Summarizing Average Price by Avocado Type and Year
+Perhaps the average price of avocadoes varied based on whether or not the avocadoes sold were grown by conventional or organic methods of farming. Organic farming requires highly regulated farming methods and compliance mechanisms related to pest control and fertilization and increases production cost for farmers (Cernansky, 2018). 
 
 ```{r}
 ## Summarize average price by type and year
@@ -220,6 +284,11 @@ avocadoes_typeyear<-avocado_tidy%>%
   summarize(avg_typeyear=mean(Average_Price))
 
 avocadoes_typeyear
+
+avocadoes_typeyear_table <- avocadoes_typeyear
+
+colnames(avocadoes_typeyear_table)<-c("Year","Type","Average Price")
+kable(avocadoes_typeyear_table, align=rep('l', length(avocadoes_typeyear_table[,1])))
 ```
 
 
@@ -232,13 +301,11 @@ gg<-gg+ggtitle("Average Price of Avocadoes Sold from 2015 to 2018")
 gg
 ```
 
-As predicted, organic avocadoes have a higher average price than conventional avocadoes. In 2017, the average price of avocadoes sold was 1.52, and this rise is likely due to the increase in both conventional and organic avocaodes sold that year. The average price of avocadoes sold in 2017, was 1.30 and 1.74, for conventional and organic avocadoes, respectively. 
+As predicted, organic avocadoes have a consistently higher average price than conventional avocadoes. In 2017 the average price of avocadoes was $1.52, and we anticipate that this rise was due to the increase in both conventional and organic avocaodes sold that year. The average price of avocadoes sold in 2017 was $1.30 and $1.74 for conventional and organic avocadoes, respectively. 
 
-### Differences in Average Price around the Continental US
+### Differences in Average Price Within the Continental U.S.
 
-citation: https://fsi.colostate.edu/avocados/
-
-About 90% of the avocado production in the United States takes place in California. Florida and Hawaii produce most of the remaining 10% of avocadoes grown in the United States. We anticipate that the average price of avocadoes will be lower in these regions, because of decreased shipping and storage costs. 
+About 90% of the avocado production in the United States takes place in California (Dekevich, 2018). Florida and Hawaii produce most of the remaining 10%. (Dekevich, 2018). We anticipate that the average price of avocadoes will be lower in these regions, because of decreased shipping and storage costs. 
 
 ```{r}
 ## Summarize average price by region
@@ -258,9 +325,9 @@ gg<-gg+ggtitle("Average Price of Avocadoes Sold in the Various US Regions")
 gg
 ```
 
-It is surprising that the regions that are producing the majority of avocadoes in the United States also have the highest average prices. The average price of avocadoes in California is 1.49, which is 0.08 higher than the unconditional mean of average prices, 1.41. The average price of avocadoes in the Southeast region of the US, which includes Florida, is 1.41. 
+It is surprising that the regions that are producing the majority of avocadoes in the United States also have the highest average prices. The average price of avocadoes in California is $1.49, which is $0.08 higher than the unconditional mean of average prices, $1.41. The average price of avocadoes in the Southeast region of the US, which includes Florida, is $1.41, equal to the unconditional mean of average prices. 
 
-### Two Predictors: Summarize average price by year and US Region
+### Two Predictors: Summarizing Average Price by Year and U.S. Region
 
 ```{r}
 ## Summarize average price by year and US Region
@@ -270,6 +337,9 @@ avocadoes_yearRegion<-avocado_tidy%>%
 
 avocadoes_yearRegion
 
+avocadoes_yearRegion_table <- avocadoes_yearRegion
+colnames(avocadoes_yearRegion_table)<-c("Year","US Region","Average Price")
+kable(avocadoes_yearRegion_table, align=rep('l', length(avocadoes_yearRegion_table[,1])))
 ```
 
 
@@ -283,5 +353,158 @@ gg<-gg+ggtitle("Average Price of Avocadoes by Year and US Region")
 gg
 ```
 
-The prices in California have fluctuated from 2015 - 2018, ranging from 1.36 to 1.64, a difference of 0.28. The prices in the Southeast have also ranged from 1.29 to 1.57, a difference of 0.26. The difference in average prices in California and Southeast is greater than the price fluctuations in South Central, Great Lakes, West, Northeast, Mid-South. 
+The prices in California fluctuated from 2015 - 2018, ranging from $1.36 to $1.64, a difference of $0.28. The prices in the Southeast  also ranged from $1.29 to $1.57, a difference of $0.26. The difference in average prices in California and the Southeast is greater than the price fluctuations in the South Central, Great Lakes, West, Northeast, and Mid-South regions.
+
+### Two Predictors: Summarizing the Volume of Avocadoes Sold by Year and U.S. Region
+
+Keeping in mind that avocadoes play a large role in the culture and cuisine of California, it is plausible that California's higher average price is due to increased demand for and/or interest in avocadoes, especially in comparison to other regions less familiar with the fruit. Please note that, due to population and size differences, we recognize that it may be difficult to form conclusions based on volume data alone. We would prefer to examine per capita consumption of avocadoes, but the data does not allow for this approach. Nevertheless, we decided to examine whether the volume of avocadoes sold in various regions of the country substantially differed. We are especially interested in how California compares to South Central. Avocadoes are commonly used in Tex-Mex and Mexican cuisine, so we predict that South Central would have a similarly high volume of avocado sales. To further explore the possible trends in our data, we examined the volume of avocadoes sold in 2015 - 2018 in the various regions of the United States. 
+
+
+```{r}
+## Summarize total volume by year and US Region
+avo_Vol_Yr_Region<-avocado_tidy%>%
+  group_by(Year, US_region)%>%
+  summarize(Vol_Yr_Region=mean(Total_Volume))%>%ungroup()%>%arrange(US_region)
+
+avo_Vol_Yr_Region
+
+avo_Vol_Yr_Region_table <- avo_Vol_Yr_Region
+colnames(avo_Vol_Yr_Region_table)<-c("Year","US Region","Mean Total Volume")
+kable(avo_Vol_Yr_Region_table, align=rep('l', length(avo_Vol_Yr_Region_table[,1])))
+```
+
+
+```{r}
+gg<-ggplot(avo_Vol_Yr_Region,aes(x=Year,y=Vol_Yr_Region))
+gg<-gg+geom_bar(stat="identity",aes(fill=US_region),position="dodge")
+gg<-gg+facet_wrap(~US_region,ncol=4)
+gg<-gg+ylab("Total Volume of Avocadoes Sold")+xlab("Year")
+gg<-gg+theme(axis.text.x = element_text(angle = 60, hjust = 1))
+gg<-gg+ggtitle("Volume of Avocadoes Sold by Year and US Region")
+gg
+```
+
+As predicted, South Central and California have the highest volume of avocadoes sold in 2015 - 2018. 
+
+
+## Models and Methods
+
+Since our predominant outcome variable, "Average_Price," and predictor variables are continuous, we chose to implement a regression model to further investigate our central questions. Based on the density plot of "Average_Price" in our exploratory data analysis, the distribution of this variable is approximately normal, which helps in interpreting the results.
+
+### Simple Regression: Model of Average Price as a function of Avocado Type
+```{r}
+#convert the variable "Type" into a binary variable
+avocado_tidy$Avo_Type<-NA
+
+avocado_tidy$Avo_Type[avocado_tidy$Type=="conventional"]<-"0"
+avocado_tidy$Avo_Type[avocado_tidy$Type=="organic"]<-"1"
+
+#Model 1: simple regression. 
+#linear model of average price (dependent variable) as a function of type of avocado
+mod1 <-lm(avocado_tidy$Average_Price~avocado_tidy$Avo_Type)
+summary(mod1)
+
+rmse(mod1,avocado_tidy)
+```
+
+This simple linear regression model indicates that there is a statistically significant relationship between the type of avocado and average price. We can reject the null hypothesis that the coefficient is zero; the association is not likely due to random chance. The coefficient demonstrates that organic avocadoes are predicted to have an increased average price of $0.50, and the intercept indicates that conventional avocadoes are predicted to have an average price of $1.16. The RMSE value shows that the error in this model is approximately 0.32; that is, the model is on average $0.32 off in predicting the average price. 
+
+### Multiple Regression: Model of Average Price as a function of Avocado Type and Volume
+
+```{r}
+##adding in percentile rank of total_volume as an additional predictor, in addition to avocado type
+
+mod2<-lm(Average_Price~as.factor(Avo_Type)+
+          Volume_Rank,
+          data=avocado_tidy)
+
+summary(mod2) 
+
+rmse(mod2,avocado_tidy)
+```
+
+The two-predictor, multiple regression model indicates that both avocado type and volume are significant predictors of average price. By adding in the second predictor, Volume_Rank, we lowered the RMSE of our model down from 0.319 to 0.313. The RMSE value of our two-predictor model indicates that our model is approximately $0.31 off on average in predicting the average price of avocadoes. 
+
+### Classification Model
+
+We then utilized the classification model to predict how likely it is that the average price of avocados is above or below the unconditional mean of $1.41. By making the dependent variable, average price of avocados, a binary variable, we gain a better understanding of the extent to which certain predictors influence the average price of avocadoes. The following command first converts our continuous dependent variable to a binary variable:
+
+'Average_Price_Binary' = 1 if 'Average_Price' is greater than or equal to 1.41.
+'Average_Price_Binary' = 0 if 'Average_Price' is less than 1.41.
+
+```{r}
+avocado_tidy$Average_Price_Binary<-NA
+
+avocado_tidy$Average_Price_Binary[avocado_tidy$Average_Price>"1.41"]<-"1"
+avocado_tidy$Average_Price_Binary[avocado_tidy$Average_Price=="1.41"]<-"1"
+avocado_tidy$Average_Price_Binary[avocado_tidy$Average_Price<"1.41"]<-"0"
+```
+
+Next we determined the proportion of average prices that were above or below the unconditional mean of 1.41. 
+```{r}
+table(avocado_tidy$Average_Price_Binary)
+prop.table(table(avocado_tidy$Average_Price_Binary))
+```
+
+Approximately 47% of the data related to average avocado price is greater than or equal to the unconditional mean of 1.41, and approximately 53% of the dataset is below this unconditional mean. We created a cross-tab table to show average prices above or below the unconditional mean by raw count and proportion.
+
+```{r descriptives}
+
+avocado_tidy%>%
+  count(Average_Price_Binary)%>% # Count numbers of observations above 1.41
+  mutate(p=prop.table(n))%>% #mutate for proportions using prop.table
+  kable(format="markdown") # output to table
+```
+
+We then cross-tabulated this information by year. Average prices were greater than or equal to the unconditional mean (1.41) 43.4% of the time in 2015, 40.1% of the time in 2016, 58.6% of the time in 2017, and 42.3% of the time in 2018. 
+
+```{r}
+
+table1 <- prop.table(table(avocado_tidy$Year,avocado_tidy$Average_Price_Binary),margin=1)
+colnames(table1)<-c("Below Average Price","Equal to or Above Average Price")
+kable(table1, align=rep('l', length(table1[,1])))
+
+```
+
+Next we again cross-tabulated this information, this time by U.S. region
+```{r}
+
+table2 <- prop.table(table(avocado_tidy$US_region,avocado_tidy$Average_Price_Binary), margin=1)
+colnames(table2)<-c("Below Average Price","Equal to or Above Average Price")
+kable(table2, align=rep('l', length(table2[,1])))
+```
+
+```{r}
+
+# Linear model
+lm_mod_2<-lm(Average_Price_Binary~
+             US_region+
+             Avo_Type,
+           data=avocado_tidy,y=TRUE,na.exclude=TRUE);summary(lm_mod_2)
+```
+
+This model indicates that the avocado type and whether the avocado was sold in the Great Lakes, Mid-South, Northeast, South Central, and West regions were significant predictors of whether an avocado was above average price. We then ran predictions based on our linear model. Everything above .5 was predicted to be above average price, everything below .5 was predicted to be below average price.
+
+```{r}
+#Predictions
+avocado_tidy<-avocado_tidy%>%
+  add_predictions(lm_mod_2)%>% ## Add in predictions from the model
+  rename(pred_lm=pred)%>% ## rename to be predictions from ols (lm)
+  mutate(pred_lm_out=ifelse(pred_lm>=.5,1,0))
+```
+
+We then created a table that shows the predictions of the model against what actually happened--independent variable rows, dependent variable columns. 
+```{r}
+pred_table<-table(avocado_tidy$Average_Price_Binary,avocado_tidy$pred_lm_out)
+
+pred_table
+
+prop.table(pred_table)
+rownames(pred_table)<-c("Predicted 0","Predicted 1")
+colnames(pred_table)<-c("Actually 0","Actually 1")
+pred_table
+```
+
+
+The prediction table above indicates that 7741 avocado sales were accurately predicted to be less than the unconditional average of 1.41, and 6711 avocado sales were accurately predicted to be above the unconditional average. However, 1736 avocado sales were predicted to be below the unconditional average but in fact, they were above 1.41. Furthermore, 1723 avocado sales were predicted to be above the unconditional average, but in fact they were below 1.41. 
 
