@@ -1,0 +1,57 @@
+---
+title: "13-assignment-chen"
+author: "Evelyn Chen"
+date: "11/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#load libraries
+library(tidyverse)
+library(plotly)
+library(shiny)
+library(leaflet)
+library(tigris)
+library(htmlwidgets)
+```
+
+```{r}
+load("pd.Rdata")
+```
+
+## 1 - Using the PD County data, create an interactive graph which displays text on a mouse-over event. Create any interactive plot of your design.
+
+I wanted to create an interactive graphic that shows the distribution of income by median household value. The interactive graphic allows the user to see the various counties scattered throughout the plot. 
+
+Independent variable: median household value - 'median_home_val'
+Dependent variable: income - 'per_capita_inc'
+
+```{r}
+gg<-ggplot(pd,
+           aes(x=median_home_val,y=per_capita_inc,
+               text=paste0(county,
+                           "<br>",
+                           "Percent College Grad: ",
+                           round(coll_grad_pc,1),
+                           "<br>",
+                           "Median Home Value: ",
+                           round(median_home_val,1)) ))
+gg<-gg+geom_point(color="blue")
+gg<-gg+xlab("Median Household Value")+ylab("Income")
+
+gg<-ggplotly(gg)
+
+gg
+
+```
+
+## 2 - Using saveWidget, save the interactive figure as an html file and submit this html file. You need only submit the figure html file.
+
+```{r}
+saveWidget(widget=gg,file="assignment13_chen_widget.html")
+```
+
